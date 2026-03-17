@@ -14,6 +14,13 @@ module.exports = {
     '@typescript-eslint/no-empty-function': 'off',
     // Easily return a promise in a mocked method.
     '@typescript-eslint/require-await': 'off',
+    // Common test patterns require stubbing which involves any types
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+    // Allow interfaces in tests for clarity
+    '@typescript-eslint/consistent-type-definitions': 'off',
     header: 'off',
   },
 };
