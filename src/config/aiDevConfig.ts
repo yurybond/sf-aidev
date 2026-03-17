@@ -36,9 +36,12 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
 
   /**
    * Get all configured source repositories.
+   * Returns a deep copy to prevent mutation issues.
    */
   public getSources(): SourceConfig[] {
-    return (this.get('sources') as SourceConfig[] | undefined) ?? [];
+    const sources = this.get('sources') as SourceConfig[] | undefined;
+    // Return deep copy to avoid reference mutation issues across platforms
+    return sources ? sources.map((s) => ({ ...s })) : [];
   }
 
   /**
@@ -121,9 +124,11 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
 
   /**
    * Get all installed artifacts.
+   * Returns a deep copy to prevent mutation issues.
    */
   public getInstalledArtifacts(): InstalledArtifact[] {
-    return (this.get('installedArtifacts') as InstalledArtifact[] | undefined) ?? [];
+    const artifacts = this.get('installedArtifacts') as InstalledArtifact[] | undefined;
+    return artifacts ? artifacts.map((a) => ({ ...a })) : [];
   }
 
   /**
