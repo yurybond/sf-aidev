@@ -396,17 +396,16 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Add Agent Command                                                                                                                                                                                                                                                                                                                  |
 | **Description**         | As a developer, I want to run `sf aidev add agent --name <agent-name>` to install a specific agent configuration from my source repository.                                                                                                                                                                                        |
 | **Acceptance Criteria** | 1. Command accepts `--name` (required) and `--source` (optional) flags<br>2. Validates agent exists in source manifest<br>3. Downloads agent files from source repo<br>4. Installs agent to correct path for detected AI tool<br>5. Updates local tracking in `.sf/ai-dev.json`<br>6. Displays success message with installed path |
-| **Status**              | New                                                                                                                                                                                                                                                                                                                                |
+| **Status**              | Done                                                                                                                                                                                                                                                                                                                               |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                                                                                                   |
 
-**Files to Create:**
+**Files Created:**
 
 | File Path                               | Purpose                                                                                                                                    |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `src/commands/aidev/add/agent.ts`       | Command class extending `SfCommand<AddAgentResult>`                                                                                        |
 | `messages/aidev.add.agent.md`           | Messages: `summary`, `description`, `examples`, `flags.name.summary`, `flags.source.summary`, `error.AgentNotFound`, `info.AgentInstalled` |
 | `test/commands/aidev/add/agent.test.ts` | Unit tests: valid agent, missing agent, tool path mapping                                                                                  |
-| `test/commands/aidev/add/agent.nut.ts`  | NUT: install agent to temp directory                                                                                                       |
 
 **Implementation Steps:**
 
