@@ -395,7 +395,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Add Agent Command                                                                                                                                                                                                                                                                                                                  |
 | **Description**         | As a developer, I want to run `sf aidev add agent --name <agent-name>` to install a specific agent configuration from my source repository.                                                                                                                                                                                        |
 | **Acceptance Criteria** | 1. Command accepts `--name` (required) and `--source` (optional) flags<br>2. Validates agent exists in source manifest<br>3. Downloads agent files from source repo<br>4. Installs agent to correct path for detected AI tool<br>5. Updates local tracking in `.sf/ai-dev.json`<br>6. Displays success message with installed path |
-| **Status**              | ✅ Done                                                                                                                                                                                                                                                                                                                            |
+| **Status**              | ✅ Done (PR #24)                                                                                                                                                                                                                                                                                                                   |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                                                                                                   |
 
 **Files Created:**
@@ -406,14 +406,6 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | `messages/aidev.add.agent.md`           | Messages: `summary`, `description`, `examples`, `flags.name.summary`, `flags.source.summary`, `error.AgentNotFound`, `info.AgentInstalled` |
 | `test/commands/aidev/add/agent.test.ts` | Unit tests: valid agent, missing agent, tool path mapping                                                                                  |
 
-**Implementation Steps:**
-
-1. Define flags: `--name` (required), `--source` (optional)
-2. Instantiate `ArtifactService` with config
-3. Call `artifactService.install('agent', name, source)` — service handles tool validation internally
-4. Log success with installed path
-5. Return typed result for `--json` support
-
 ---
 
 ### US-04: Add Prompt Command
@@ -423,7 +415,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Add Prompt Command                                                                                                                                                                                                                                                                                                                    |
 | **Description**         | As a developer, I want to run `sf aidev add prompt --name <prompt-name>` to install a specific prompt template from my source repository.                                                                                                                                                                                             |
 | **Acceptance Criteria** | 1. Command accepts `--name` (required) and `--source` (optional) flags<br>2. Validates prompt exists in source manifest<br>3. Downloads prompt files from source repo<br>4. Installs prompt to correct path for detected AI tool<br>5. Updates local tracking in `.sf/ai-dev.json`<br>6. Displays success message with installed path |
-| **Status**              | ✅ Done                                                                                                                                                                                                                                                                                                                               |
+| **Status**              | ✅ Done (PR #25)                                                                                                                                                                                                                                                                                                                      |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                                                                                                      |
 
 **Files Created:**
@@ -546,7 +538,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Source List Command                                                                                                                                                                                                                              |
 | **Description**         | As a developer, I want to run `sf aidev source list` to see all configured source repositories and identify which one is the default.                                                                                                            |
 | **Acceptance Criteria** | 1. Lists all configured source repos with name and URL<br>2. Indicates which source is the default<br>3. Shows artifact count per source (if cached)<br>4. Supports `--json` for automation<br>5. Shows helpful message if no sources configured |
-| **Status**              | ✅ Done                                                                                                                                                                                                                                          |
+| **Status**              | ✅ Done (PR #26)                                                                                                                                                                                                                                 |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                 |
 
 **Files Created:**
@@ -574,7 +566,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Source Add Command                                                                                                                                                                                                                                                                                                                              |
 | **Description**         | As a developer, I want to run `sf aidev source add --repo <owner/repo>` to add a new GitHub repository as an artifact source.                                                                                                                                                                                                                   |
 | **Acceptance Criteria** | 1. Command accepts `--repo` (required) flag in `owner/repo` format<br>2. Validates repo format and accessibility<br>3. Fetches manifest to verify it's a valid source<br>4. Optionally sets as default with `--set-default` flag<br>5. Saves source to global config `~/.sf/ai-dev.json`<br>6. Displays success with available artifact summary |
-| **Status**              | ✅ Done                                                                                                                                                                                                                                                                                                                                         |
+| **Status**              | ✅ Done (PR #27)                                                                                                                                                                                                                                                                                                                                |
 | **Depends On**          | US-00-A, US-00-C, US-00-E                                                                                                                                                                                                                                                                                                                       |
 
 **Files Created:**
@@ -604,7 +596,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Source Remove Command                                                                                                                                                                                                                                                               |
 | **Description**         | As a developer, I want to run `sf aidev source remove --repo <owner/repo>` to remove a configured source repository.                                                                                                                                                                |
 | **Acceptance Criteria** | 1. Command accepts `--repo` (required) flag<br>2. Validates source exists in config<br>3. Prompts for confirmation (unless `--no-prompt`)<br>4. Removes source from global config<br>5. If removed source was default, prompts to select new default<br>6. Displays success message |
-| **Status**              | ✅ Done                                                                                                                                                                                                                                                                             |
+| **Status**              | ✅ Done (PR #28)                                                                                                                                                                                                                                                                    |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                                                    |
 
 **Files Created:**
@@ -636,7 +628,7 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Source Set-Default Command                                                                                                                                                                                                        |
 | **Description**         | As a developer, I want to run `sf aidev source set-default --repo <owner/repo>` to set which source repository is used by default for artifact installation.                                                                      |
 | **Acceptance Criteria** | 1. Command accepts `--repo` (required) flag<br>2. Validates source exists in configured sources<br>3. Updates default source in global config<br>4. Displays success with new default info<br>5. Supports `--json` for automation |
-| **Status**              | ✅ Done                                                                                                                                                                                                                           |
+| **Status**              | ✅ Done (PR #29)                                                                                                                                                                                                                  |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                  |
 
 **Files Created:**
