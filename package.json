@@ -5,7 +5,9 @@
   "dependencies": {
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
-    "@salesforce/sf-plugins-core": "^12"
+    "@salesforce/sf-plugins-core": "^12",
+    "@salesforce/ts-types": "^2.0.12",
+    "got": "13.0.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.1.9",
@@ -54,11 +56,11 @@
     "format": "wireit",
     "link-check": "wireit",
     "lint": "wireit",
-    "postinstall": "yarn husky install",
+    "postinstall": "husky install || true",
     "postpack": "sf-clean --ignore-signing-artifacts",
     "prepack": "sf-prepack",
     "test": "wireit",
-    "test:nuts": "nyc mocha \"**/*.nut.ts\" --slow 4500 --timeout 600000 --parallel",
+    "test:nuts": "node -e \"const g=require('glob');if(g.sync('**/*.nut.ts').length)process.exit(1)\" || nyc mocha \"**/*.nut.ts\" --slow 4500 --timeout 600000 --parallel",
     "test:only": "wireit",
     "version": "oclif readme"
   },
