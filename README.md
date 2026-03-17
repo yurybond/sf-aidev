@@ -160,3 +160,14 @@ sf plugins
 _No commands implemented yet. Add your commands in `src/commands/`._
 
 <!-- commandsstop -->
+
+## AI Tools Detection
+
+| Tool Name          | Detection Path                                                                                          | Link To Documentation                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **GitHub Copilot** | `.github/copilot-instructions.md`<br>`.github/instructions/`<br>`.github/agents/`<br>`.github/prompts/` | [GitHub Copilot Docs](https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot) |
+| **Claude Code**    | `.claude/`                                                                                              | [Claude Code Docs](https://code.claude.com/docs/en/memory)                                                                             |
+| **Codex (OpenAI)** | `.codex/`                                                                                               | [Codex Docs](https://developers.openai.com/codex/guides/agents-md)                                                                     |
+| **Gemini CLI**     | `.gemini/`                                                                                              | [Gemini CLI Docs](https://geminicli.com/docs/)                                                                                         |
+| **Cursor**         | `.cursor/`                                                                                              | [Cursor Docs](https://cursor.com/docs/rules)                                                                                           |
+| **Windsurf**       | `.windsurf/`                                                                                            | [Windsurf Docs](https://docs.windsurf.com/windsurf/cascade/memories)                                                                   |
