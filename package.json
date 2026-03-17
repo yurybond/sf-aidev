@@ -5,7 +5,9 @@
   "dependencies": {
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
-    "@salesforce/sf-plugins-core": "^12"
+    "@salesforce/sf-plugins-core": "^12",
+    "@salesforce/ts-types": "^2.0.12",
+    "got": "13.0.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.1.9",
