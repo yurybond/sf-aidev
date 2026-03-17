@@ -425,17 +425,16 @@ Build a Salesforce CLI plugin that installs production-ready AI development tool
 | **Title**               | Add Prompt Command                                                                                                                                                                                                                                                                                                                    |
 | **Description**         | As a developer, I want to run `sf aidev add prompt --name <prompt-name>` to install a specific prompt template from my source repository.                                                                                                                                                                                             |
 | **Acceptance Criteria** | 1. Command accepts `--name` (required) and `--source` (optional) flags<br>2. Validates prompt exists in source manifest<br>3. Downloads prompt files from source repo<br>4. Installs prompt to correct path for detected AI tool<br>5. Updates local tracking in `.sf/ai-dev.json`<br>6. Displays success message with installed path |
-| **Status**              | New                                                                                                                                                                                                                                                                                                                                   |
+| **Status**              | Done                                                                                                                                                                                                                                                                                                                                  |
 | **Depends On**          | US-00-A, US-00-E                                                                                                                                                                                                                                                                                                                      |
 
-**Files to Create:**
+**Files Created:**
 
 | File Path                                | Purpose                                                                                                   |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `src/commands/aidev/add/prompt.ts`       | Command class extending `SfCommand<AddPromptResult>`                                                      |
 | `messages/aidev.add.prompt.md`           | Messages: `summary`, `description`, `examples`, `flags.*`, `error.PromptNotFound`, `info.PromptInstalled` |
 | `test/commands/aidev/add/prompt.test.ts` | Unit tests                                                                                                |
-| `test/commands/aidev/add/prompt.nut.ts`  | NUT                                                                                                       |
 
 **Implementation Steps:**
 
