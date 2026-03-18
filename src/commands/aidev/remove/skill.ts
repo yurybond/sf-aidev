@@ -12,7 +12,7 @@ import { AiDevConfig } from '../../../config/aiDevConfig.js';
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('ai-dev', 'aidev.remove.skill');
 
-export interface RemoveSkillResult {
+export type RemoveSkillResult = {
   success: boolean;
   name: string;
   error?: string;
