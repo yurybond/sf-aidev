@@ -12,7 +12,7 @@ import { AiDevConfig } from '../../../config/aiDevConfig.js';
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('ai-dev', 'aidev.remove.agent');
 
-export interface RemoveAgentResult {
+export type RemoveAgentResult = {
   success: boolean;
   name: string;
   error?: string;

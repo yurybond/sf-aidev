@@ -14,7 +14,7 @@ import type { ArtifactType } from '../../../types/manifest.js';
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('ai-dev', 'aidev.list.artifacts');
 
-export interface ListArtifactsResult {
+export type ListArtifactsResult = {
   installed: InstalledArtifact[];
   available: AvailableArtifact[];
 }
