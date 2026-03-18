@@ -20,7 +20,7 @@ Skip artifact installation, only configure tool and source.
 
 # flags.no-prompt.summary
 
-Skip confirmation prompts (for scripting).
+Skip the confirmation prompt.
 
 # examples
 
