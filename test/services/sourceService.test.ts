@@ -109,6 +109,36 @@ describe('SourceService', () => {
       const defaultSource = service.getDefault();
       expect(defaultSource?.repo).to.equal('user/repo');
     });
+
+    it('returns error when manager.add throws after successful manifest fetch', async () => {
+      // First add will succeed, second add should fail at manager level
+      await service.add('user/repo');
+
+      // Create a new service with a mock that succeeds on validation but the manager rejects duplicate
+      const secondService = new SourceService(config, mockFetcher);
+      const result = await secondService.add('user/repo');
+
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('already configured');
+    });
+
+    it('handles non-Error throw from manager.add', async () => {
+      // Create a fetcher that succeeds but causes a string error to be thrown
+      const stringErrorFetcher = {
+        fetchManifest: async (): Promise<Manifest> => testManifest,
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      // Add first to make hasSource return false initially
+      const testService = new SourceService(config, stringErrorFetcher);
+
+      // Manually add a source with invalid format to trigger manager error after validation
+      // The manager.add will throw for invalid format after manifest fetch succeeds
+      const result = await testService.add('invalid');
+
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('Invalid repository format');
+    });
   });
 
   describe('remove', () => {

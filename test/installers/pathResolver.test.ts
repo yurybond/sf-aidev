@@ -47,6 +47,17 @@ describe('PathResolver', () => {
         expect((error as SfError).name).to.equal('UnsupportedTool');
       }
     });
+
+    it('throws error for unknown artifact type', () => {
+      try {
+        PathResolver.getBasePath('unknown' as import('../../src/types/manifest.js').ArtifactType, 'copilot');
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).to.be.instanceOf(SfError);
+        expect((error as SfError).name).to.equal('UnknownArtifactType');
+        expect((error as SfError).message).to.include('Unknown artifact type');
+      }
+    });
   });
 
   describe('resolve', () => {
@@ -88,6 +99,11 @@ describe('PathResolver', () => {
       const tools = PathResolver.getSupportedTools('prompt');
       expect(tools).to.include.members(['copilot', 'claude']);
     });
+
+    it('returns empty array for unknown artifact type', () => {
+      const tools = PathResolver.getSupportedTools('unknown' as import('../../src/types/manifest.js').ArtifactType);
+      expect(tools).to.be.an('array').that.is.empty;
+    });
   });
 
   describe('isToolSupported', () => {
@@ -98,6 +114,11 @@ describe('PathResolver', () => {
 
     it('returns false for unsupported tool', () => {
       expect(PathResolver.isToolSupported('skill', 'unknown')).to.be.false;
+    });
+
+    it('returns false for unknown artifact type', () => {
+      expect(PathResolver.isToolSupported('unknown' as import('../../src/types/manifest.js').ArtifactType, 'copilot'))
+        .to.be.false;
     });
   });
 });

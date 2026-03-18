@@ -135,6 +135,18 @@ describe('aidev init', () => {
 
       expect(result.tool).to.equal('claude');
     });
+
+    it('auto-selects first tool when copilot not available with --no-prompt', async () => {
+      detectAllStub.resolves(['claude', 'cursor']);
+      getDefaultStub.returns({ repo: 'owner/repo' });
+      hasSourceStub.returns(true);
+      listAvailableStub.resolves([]);
+
+      const result = await Init.run(['--no-prompt'], oclifConfig);
+
+      // When copilot is not in the list, should select the first tool (claude)
+      expect(result.tool).to.equal('claude');
+    });
   });
 
   describe('source configuration', () => {
@@ -197,6 +209,21 @@ describe('aidev init', () => {
       } catch (error) {
         expect(error).to.be.instanceOf(Error);
         expect((error as Error).message).to.include('Failed to add source');
+      }
+    });
+
+    it('throws error when source add fails without error property', async () => {
+      detectAllStub.resolves(['copilot']);
+      hasSourceStub.returns(false);
+      addSourceStub.resolves({ success: false });
+
+      const cmd = new Init(['--source', 'bad/repo', '--no-prompt'], oclifConfig);
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown SfError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).message).to.include('Unknown error');
       }
     });
   });
@@ -288,6 +315,23 @@ describe('aidev init', () => {
       expect(result.installedArtifacts).to.have.lengthOf(2);
       expect(result.installedArtifacts.filter((r) => r.success)).to.have.lengthOf(1);
       expect(result.installedArtifacts.filter((r) => !r.success)).to.have.lengthOf(1);
+    });
+
+    it('handles install failure without error property', async () => {
+      listAvailableStub.resolves([availableArtifacts[0]]);
+      installStub.resolves({
+        success: false,
+        artifact: 'skill-1',
+        type: 'skill',
+        tool: 'copilot',
+        installedPath: '',
+        // No error property set
+      });
+
+      const result = await Init.run(['--no-prompt'], oclifConfig);
+
+      expect(result.installedArtifacts).to.have.lengthOf(1);
+      expect(result.installedArtifacts[0].success).to.be.false;
     });
   });
 
