@@ -12,7 +12,7 @@ GitHub repository in owner/repo format to remove.
 
 # flags.no-prompt.summary
 
-Skip confirmation prompt.
+Skip the confirmation prompt.
 
 # examples
 
