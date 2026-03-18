@@ -90,7 +90,7 @@ export default class Init extends SfCommand<InitResult> {
     this.spinner.stop();
 
     if (detectedTools.length === 0) {
-      throw new SfError(messages.getMessage('error.NoToolsDetected'), 'NoToolsDetected', [
+      throw new SfError(messages.getMessage('error.NoToolsDetected'), 'NoToolsDetectedError', [
         messages.getMessage('error.NoToolsDetectedActions'),
       ]);
     }
@@ -131,7 +131,7 @@ export default class Init extends SfCommand<InitResult> {
     } else {
       const defaultSource = sourceService.getDefault();
       if (!defaultSource) {
-        throw new SfError(messages.getMessage('error.NoSourceConfigured'), 'NoSourceConfigured', [
+        throw new SfError(messages.getMessage('error.NoSourceConfigured'), 'NoSourceConfiguredError', [
           messages.getMessage('error.NoSourceConfiguredActions'),
         ]);
       }
@@ -146,7 +146,7 @@ export default class Init extends SfCommand<InitResult> {
 
       if (!addResult.success) {
         const errorMsg = addResult.error ?? 'Unknown error';
-        throw new SfError(messages.getMessage('error.SourceAddFailed', [sourceRepo, errorMsg]), 'SourceAddFailed');
+        throw new SfError(messages.getMessage('error.SourceAddFailed', [sourceRepo, errorMsg]), 'SourceAddFailedError');
       }
     }
 
