@@ -61,9 +61,10 @@ export default class Init extends SfCommand<InitResult> {
     const selectedTool = await this.selectTool(flags as InitFlags, projectPath);
     const detectedTools = await DetectorRegistry.detectAll(projectPath);
 
-    const config = await AiDevConfig.create({ isGlobal: false });
-    const artifactService = new ArtifactService(config, projectPath);
-    const sourceService = new SourceService(config);
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const artifactService = new ArtifactService(localConfig, projectPath);
+    const sourceService = new SourceService(globalConfig);
 
     await artifactService.setActiveTool(selectedTool);
     this.log(messages.getMessage('info.ToolConfigured', [selectedTool]));
