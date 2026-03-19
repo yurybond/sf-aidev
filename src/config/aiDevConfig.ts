@@ -17,7 +17,7 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
    * Returns the filename for the config file.
    */
   public static getFileName(): string {
-    return 'ai-dev.json';
+    return 'sf-aidev.json';
   }
 
   /**

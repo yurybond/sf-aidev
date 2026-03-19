@@ -28,8 +28,8 @@ describe('AiDevConfig', () => {
   });
 
   describe('getFileName', () => {
-    it('returns ai-dev.json', () => {
-      expect(AiDevConfig.getFileName()).to.equal('ai-dev.json');
+    it('returns sf-aidev.json', () => {
+      expect(AiDevConfig.getFileName()).to.equal('sf-aidev.json');
     });
   });
 

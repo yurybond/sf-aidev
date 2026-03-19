@@ -34,7 +34,7 @@ Initialize AI development tools in your project. Auto-detects the AI tool in use
 
 ```bash
 sf aidev init
-sf aidev init --tool copilot --source owner/ai-dev-templates
+sf aidev init --tool copilot --source owner/ai-dev-lifecycle
 sf aidev init --no-install --no-prompt
 ```
 
@@ -283,4 +283,3 @@ Tests use Mocha + Chai + Sinon. Stub services and config, then call `Command.run
 
 - [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md) — Complete Salesforce CLI Plugin Developer Guide
 - [PLUGIN_DEV_SUMMARY.md](PLUGIN_DEV_SUMMARY.md) — Quick reference summary
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — Detailed implementation plan with user stories

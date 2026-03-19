@@ -34,7 +34,7 @@ Skip the confirmation prompt.
 
 - Initialize with a source repository:
 
-  <%= config.bin %> <%= command.id %> --source owner/ai-dev-templates
+  <%= config.bin %> <%= command.id %> --source owner/ai-dev-lifecycle
 
 - Initialize without prompts (for CI/scripts):
 

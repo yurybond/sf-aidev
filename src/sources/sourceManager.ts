@@ -40,7 +40,7 @@ export class SourceManager {
     // Validate repo format
     if (!SourceManager.isValidRepoFormat(repo)) {
       throw new SfError(`Invalid repository format: ${repo}. Expected format: owner/repo`, 'InvalidRepoFormat', [
-        'Use the format "owner/repo", for example: "salesforce/ai-dev-templates"',
+        'Use the format "owner/repo", for example: "salesforce/ai-dev-lifecycle"',
       ]);
     }
 
