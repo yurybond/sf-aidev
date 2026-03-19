@@ -10,6 +10,28 @@ import { SfError } from '@salesforce/core';
 import { Manifest } from '../types/manifest.js';
 
 /**
+ * GitHub Trees API tree entry.
+ */
+interface TreeEntry {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree';
+  sha: string;
+  size?: number;
+  url: string;
+}
+
+/**
+ * GitHub Trees API response.
+ */
+interface TreeResponse {
+  sha: string;
+  url: string;
+  tree: TreeEntry[];
+  truncated: boolean;
+}
+
+/**
  * Fetches files and manifests from GitHub repositories using raw.githubusercontent.com.
  */
 export class GitHubFetcher {
@@ -111,5 +133,57 @@ export class GitHubFetcher {
    */
   public static buildUrl(repo: string, path: string, branch = 'main'): string {
     return `${this.BASE_URL}/${repo}/${branch}/${path}`;
+  }
+
+  /**
+   * Fetch the file tree from a GitHub repository using the Trees API.
+   *
+   * @param repo - Repository in owner/repo format.
+   * @param branch - Branch name (default: 'main').
+   * @returns Array of file paths (blobs only, not directories).
+   * @throws SfError if the repo is not found or rate limited.
+   */
+  public static async fetchRepoTree(repo: string, branch = 'main'): Promise<string[]> {
+    const url = `https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`;
+
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'sf-aidev',
+    };
+
+    // Use GITHUB_TOKEN if available for higher rate limits
+    const token = process.env.GITHUB_TOKEN;
+    if (token) {
+      headers['Authorization'] = `token ${token}`;
+    }
+
+    try {
+      const response = await got(url, {
+        timeout: { request: this.TIMEOUT },
+        retry: { limit: 2 },
+        headers,
+      }).json<TreeResponse>();
+
+      // Filter to only blob (file) entries
+      return response.tree.filter((entry) => entry.type === 'blob').map((entry) => entry.path);
+    } catch (error) {
+      if (error instanceof HTTPError) {
+        if (error.response.statusCode === 404) {
+          throw new SfError(`Repository "${repo}" not found or branch "${branch}" does not exist.`, 'RepoNotFound');
+        }
+        if (error.response.statusCode === 403) {
+          throw new SfError(
+            'GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable for higher limits.',
+            'RateLimitExceeded'
+          );
+        }
+      }
+
+      if (error instanceof RequestError) {
+        throw new SfError(`Network error while fetching repo tree from ${repo}: ${error.message}`, 'NetworkError');
+      }
+
+      throw new SfError(`Failed to fetch repo tree from ${repo}: ${(error as Error).message}`, 'FetchError');
+    }
   }
 }

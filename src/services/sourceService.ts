@@ -4,8 +4,10 @@
  * Licensed under the BSD 3-Clause license.
  */
 
+import { SfError } from '@salesforce/core';
 import { AiDevConfig } from '../config/aiDevConfig.js';
 import { GitHubFetcher } from '../sources/gitHubFetcher.js';
+import { ManifestBuilder } from '../sources/manifestBuilder.js';
 import { SourceManager } from '../sources/sourceManager.js';
 import type { Manifest } from '../types/manifest.js';
 import type { SourceConfig } from '../types/config.js';
@@ -29,6 +31,8 @@ export interface AddSourceResult {
   source?: SourceConfig;
   manifest?: Manifest;
   error?: string;
+  /** Indicates the manifest was auto-generated from discovered artifacts */
+  autoDiscovered?: boolean;
 }
 
 /**
@@ -49,7 +53,8 @@ export class SourceService {
 
   /**
    * Add a source with validation
-   * Verifies the source has a valid manifest before adding
+   * Verifies the source has a valid manifest before adding.
+   * Falls back to auto-discovery if manifest.json is not found.
    */
   public async add(
     repo: string,
@@ -65,14 +70,42 @@ export class SourceService {
 
     // Validate manifest exists unless skipped
     let manifest: Manifest | undefined;
+    let autoDiscovered = false;
+
     if (!options.skipValidation) {
       try {
         manifest = await this.fetcher.fetchManifest(repo);
       } catch (error) {
-        return {
-          success: false,
-          error: `Failed to fetch manifest from "${repo}": ${error instanceof Error ? error.message : String(error)}`,
-        };
+        // Check if it's a ManifestNotFound error - try auto-discovery
+        if (error instanceof SfError && error.name === 'ManifestNotFound') {
+          try {
+            const filePaths = await this.fetcher.fetchRepoTree(repo);
+            manifest = ManifestBuilder.build(filePaths);
+
+            // If no artifacts discovered, return error
+            if (manifest.artifacts.length === 0) {
+              return {
+                success: false,
+                error: `No manifest.json found and no artifacts discovered in well-known paths in "${repo}".`,
+              };
+            }
+
+            autoDiscovered = true;
+          } catch {
+            // If tree fetch also fails, return original manifest error
+            return {
+              success: false,
+              error: `Failed to fetch manifest from "${repo}": ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            };
+          }
+        } else {
+          return {
+            success: false,
+            error: `Failed to fetch manifest from "${repo}": ${error instanceof Error ? error.message : String(error)}`,
+          };
+        }
       }
     }
 
@@ -84,6 +117,7 @@ export class SourceService {
         success: true,
         source,
         manifest,
+        autoDiscovered,
       };
     } catch (error) {
       return {
