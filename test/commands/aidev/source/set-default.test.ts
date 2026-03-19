@@ -48,7 +48,20 @@ describe('aidev source set-default', () => {
   });
 
   describe('successful set default', () => {
-    it('sets a new default source', async () => {
+    it('sets a new default source with positional arg', async () => {
+      hasStub.returns(true);
+      getDefaultStub.returns(oldDefault);
+      setDefaultStub.resolves({ success: true });
+
+      const result = await SourceSetDefault.run(['new/repo'], oclifConfig);
+
+      expect(result.repo).to.equal('new/repo');
+      expect(result.previousDefault).to.equal('old/repo');
+      expect(setDefaultStub.calledOnce).to.be.true;
+      expect(setDefaultStub.calledWith('new/repo')).to.be.true;
+    });
+
+    it('sets a new default source with --repo flag', async () => {
       hasStub.returns(true);
       getDefaultStub.returns(oldDefault);
       setDefaultStub.resolves({ success: true });
@@ -69,6 +82,17 @@ describe('aidev source set-default', () => {
       const result = await SourceSetDefault.run(['-r', 'new/repo'], oclifConfig);
 
       expect(result.repo).to.equal('new/repo');
+    });
+
+    it('positional arg takes precedence over --repo flag', async () => {
+      hasStub.returns(true);
+      getDefaultStub.returns(oldDefault);
+      setDefaultStub.resolves({ success: true });
+
+      const result = await SourceSetDefault.run(['positional/repo', '--repo', 'flag/repo'], oclifConfig);
+
+      expect(result.repo).to.equal('positional/repo');
+      expect(setDefaultStub.calledWith('positional/repo')).to.be.true;
     });
 
     it('returns undefined previousDefault when setting same source', async () => {
@@ -115,6 +139,18 @@ describe('aidev source set-default', () => {
   });
 
   describe('error handling', () => {
+    it('throws SfError when neither arg nor flag provided', async () => {
+      const cmd = new SourceSetDefault([], oclifConfig);
+
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown SfError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).message).to.include('Repository is required');
+      }
+    });
+
     it('throws SfError when source not configured', async () => {
       hasStub.returns(false);
 
@@ -174,8 +210,13 @@ describe('aidev source set-default', () => {
       expect(SourceSetDefault.flags).to.have.property('repo');
     });
 
-    it('repo flag is required', () => {
-      expect(SourceSetDefault.flags.repo.required).to.be.true;
+    it('repo flag is not required (positional arg can be used instead)', () => {
+      expect(SourceSetDefault.flags.repo.required).to.be.false;
+    });
+
+    it('has args definition for positional repo', () => {
+      expect(SourceSetDefault.args).to.have.property('repo');
+      expect(SourceSetDefault.args.repo.required).to.be.false;
     });
   });
 

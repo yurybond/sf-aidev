@@ -6,6 +6,10 @@ Set a source repository as the default.
 
 Sets the specified source repository as the default for artifact installation. The source must already be configured.
 
+# args.repo.summary
+
+GitHub repository in owner/repo format to set as default.
+
 # flags.repo.summary
 
 GitHub repository in owner/repo format to set as default.
@@ -13,6 +17,10 @@ GitHub repository in owner/repo format to set as default.
 # examples
 
 - Set a source as the default:
+
+  <%= config.bin %> <%= command.id %> owner/repo
+
+- Using the --repo flag (alternative syntax):
 
   <%= config.bin %> <%= command.id %> --repo owner/repo
 
@@ -27,3 +35,7 @@ Source repository "%s" is not configured. Add it first with "sf aidev source add
 # info.DefaultSet
 
 Source "%s" is now set as the default.
+
+# error.RepoRequired
+
+Repository is required. Provide it as a positional argument or use the --repo flag.

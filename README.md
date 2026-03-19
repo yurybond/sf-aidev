@@ -22,7 +22,7 @@ sf aidev add agent --name code-helper
 sf aidev add prompt --name deploy-checklist
 
 # Manage sources
-sf aidev source add --repo myorg/ai-templates --set-default
+sf aidev source add myorg/ai-templates --set-default
 sf aidev source list
 ```
 
@@ -97,18 +97,20 @@ sf aidev list artifacts --source owner/repo
 Manage source repositories that provide artifacts.
 
 ```bash
-sf aidev source add --repo owner/repo --set-default
+sf aidev source add owner/repo --set-default
 sf aidev source list
-sf aidev source remove --repo owner/repo
-sf aidev source set-default --repo owner/repo
+sf aidev source remove owner/repo
+sf aidev source set-default owner/repo
 ```
 
-| Command              | Flags                                         |
-| -------------------- | --------------------------------------------- |
-| `source add`         | `--repo` `-r` **(required)**, `--set-default` |
-| `source remove`      | `--repo` `-r` **(required)**, `--no-prompt`   |
-| `source list`        | _(none)_                                      |
-| `source set-default` | `--repo` `-r` **(required)**                  |
+| Command              | Arguments / Flags                                   |
+| -------------------- | --------------------------------------------------- |
+| `source add`         | `REPO` (positional), `--repo` `-r`, `--set-default` |
+| `source remove`      | `REPO` (positional), `--repo` `-r`, `--no-prompt`   |
+| `source list`        | _(none)_                                            |
+| `source set-default` | `REPO` (positional), `--repo` `-r`                  |
+
+The `REPO` argument (in `owner/repo` format) can be provided as a positional argument or via the `--repo` flag.
 
 All commands support `--json` for machine-readable output.
 

@@ -62,7 +62,18 @@ describe('aidev source add', () => {
   });
 
   describe('successful addition', () => {
-    it('adds a valid source repository', async () => {
+    it('adds a valid source repository with positional arg', async () => {
+      addStub.resolves(successResult);
+
+      const result = await SourceAdd.run(['owner/repo'], oclifConfig);
+
+      expect(result.repo).to.equal('owner/repo');
+      expect(result.artifactCount).to.equal(2);
+      expect(result.isDefault).to.be.false;
+      expect(addStub.calledOnce).to.be.true;
+    });
+
+    it('adds a valid source repository with --repo flag', async () => {
       addStub.resolves(successResult);
 
       const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
@@ -81,7 +92,25 @@ describe('aidev source add', () => {
       expect(result.repo).to.equal('owner/repo');
     });
 
-    it('sets source as default when --set-default flag is provided', async () => {
+    it('positional arg takes precedence over --repo flag', async () => {
+      addStub.resolves(successResult);
+
+      const result = await SourceAdd.run(['positional/repo', '--repo', 'flag/repo'], oclifConfig);
+
+      expect(result.repo).to.equal('positional/repo');
+      expect(addStub.firstCall.args[0]).to.equal('positional/repo');
+    });
+
+    it('sets source as default when --set-default flag is provided with positional arg', async () => {
+      addStub.resolves(successDefaultResult);
+
+      const result = await SourceAdd.run(['owner/repo', '--set-default'], oclifConfig);
+
+      expect(result.isDefault).to.be.true;
+      expect(addStub.firstCall.args[1]).to.deep.include({ isDefault: true });
+    });
+
+    it('sets source as default when --set-default flag is provided with --repo flag', async () => {
       addStub.resolves(successDefaultResult);
 
       const result = await SourceAdd.run(['--repo', 'owner/repo', '--set-default'], oclifConfig);
@@ -168,6 +197,18 @@ describe('aidev source add', () => {
       } catch (error) {
         expect(error).to.be.instanceOf(Error);
         expect((error as Error).message).to.include('Invalid repository format');
+      }
+    });
+
+    it('throws SfError when neither arg nor flag provided', async () => {
+      const cmd = new SourceAdd([], oclifConfig);
+
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown SfError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).message).to.include('Repository is required');
       }
     });
 
@@ -269,8 +310,13 @@ describe('aidev source add', () => {
       expect(SourceAdd.flags).to.have.property('set-default');
     });
 
-    it('repo flag is required', () => {
-      expect(SourceAdd.flags.repo.required).to.be.true;
+    it('repo flag is not required (positional arg can be used instead)', () => {
+      expect(SourceAdd.flags.repo.required).to.be.false;
+    });
+
+    it('has args definition for positional repo', () => {
+      expect(SourceAdd.args).to.have.property('repo');
+      expect(SourceAdd.args.repo.required).to.be.false;
     });
 
     it('set-default flag defaults to false', () => {

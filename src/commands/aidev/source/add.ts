@@ -4,6 +4,7 @@
  * Licensed under the BSD 3-Clause license.
  */
 
+import { Args } from '@oclif/core';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { SourceService, type AddSourceResult } from '../../../services/sourceService.js';
@@ -24,11 +25,18 @@ export default class SourceAdd extends SfCommand<SourceAddResult> {
   public static readonly examples = messages.getMessages('examples');
   public static readonly enableJsonFlag = true;
 
+  public static readonly args = {
+    repo: Args.string({
+      description: messages.getMessage('args.repo.summary'),
+      required: false,
+    }),
+  };
+
   public static readonly flags = {
     repo: Flags.string({
       char: 'r',
       summary: messages.getMessage('flags.repo.summary'),
-      required: true,
+      required: false,
     }),
     'set-default': Flags.boolean({
       summary: messages.getMessage('flags.set-default.summary'),
@@ -37,27 +45,33 @@ export default class SourceAdd extends SfCommand<SourceAddResult> {
   };
 
   public async run(): Promise<SourceAddResult> {
-    const { flags } = await this.parse(SourceAdd);
+    const { args, flags } = await this.parse(SourceAdd);
+
+    // Resolve repo from positional arg or flag
+    const repo = args.repo ?? flags.repo;
+    if (!repo) {
+      throw new SfError(messages.getMessage('error.RepoRequired'), 'RepoRequiredError');
+    }
 
     // Validate repo format (owner/repo)
     const repoPattern = /^[\w.-]+\/[\w.-]+$/;
-    if (!repoPattern.test(flags.repo)) {
-      throw new SfError(messages.getMessage('error.InvalidRepoFormat', [flags.repo]), 'InvalidRepoFormatError');
+    if (!repoPattern.test(repo)) {
+      throw new SfError(messages.getMessage('error.InvalidRepoFormat', [repo]), 'InvalidRepoFormatError');
     }
 
     const config: AiDevConfig = await AiDevConfig.create({ isGlobal: true });
     const service: SourceService = new SourceService(config);
 
-    const result: AddSourceResult = await service.add(flags.repo, {
+    const result: AddSourceResult = await service.add(repo, {
       isDefault: flags['set-default'],
     });
 
     if (!result.success) {
       if (result.error?.includes('already configured')) {
-        throw new SfError(messages.getMessage('error.SourceAlreadyExists', [flags.repo]), 'SourceAlreadyExistsError');
+        throw new SfError(messages.getMessage('error.SourceAlreadyExists', [repo]), 'SourceAlreadyExistsError');
       }
       if (result.error?.includes('Failed to fetch manifest')) {
-        throw new SfError(messages.getMessage('error.ManifestNotFound', [flags.repo]), 'ManifestNotFoundError');
+        throw new SfError(messages.getMessage('error.ManifestNotFound', [repo]), 'ManifestNotFoundError');
       }
       throw new SfError(result.error ?? 'Unknown error', 'SourceAddError');
     }
@@ -65,14 +79,14 @@ export default class SourceAdd extends SfCommand<SourceAddResult> {
     const artifactCount = result.manifest?.artifacts.length ?? 0;
     const isDefault = result.source?.isDefault ?? false;
 
-    this.log(messages.getMessage('info.SourceAdded', [flags.repo, artifactCount]));
+    this.log(messages.getMessage('info.SourceAdded', [repo, artifactCount]));
 
     if (isDefault) {
-      this.log(messages.getMessage('info.SetAsDefault', [flags.repo]));
+      this.log(messages.getMessage('info.SetAsDefault', [repo]));
     }
 
     return {
-      repo: flags.repo,
+      repo,
       artifactCount,
       isDefault,
     };
