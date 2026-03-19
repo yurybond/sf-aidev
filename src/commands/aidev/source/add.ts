@@ -17,6 +17,7 @@ export type SourceAddResult = {
   repo: string;
   artifactCount: number;
   isDefault: boolean;
+  autoDiscovered: boolean;
 };
 
 export default class SourceAdd extends SfCommand<SourceAddResult> {
@@ -73,13 +74,21 @@ export default class SourceAdd extends SfCommand<SourceAddResult> {
       if (result.error?.includes('Failed to fetch manifest')) {
         throw new SfError(messages.getMessage('error.ManifestNotFound', [repo]), 'ManifestNotFoundError');
       }
+      if (result.error?.includes('no artifacts discovered')) {
+        throw new SfError(messages.getMessage('error.NoArtifactsDiscovered', [repo]), 'NoArtifactsDiscoveredError');
+      }
       throw new SfError(result.error ?? 'Unknown error', 'SourceAddError');
     }
 
     const artifactCount = result.manifest?.artifacts.length ?? 0;
     const isDefault = result.source?.isDefault ?? false;
+    const autoDiscovered = result.autoDiscovered ?? false;
 
-    this.log(messages.getMessage('info.SourceAdded', [repo, artifactCount]));
+    if (autoDiscovered) {
+      this.log(messages.getMessage('info.AutoDiscovered', [repo, artifactCount]));
+    } else {
+      this.log(messages.getMessage('info.SourceAdded', [repo, artifactCount]));
+    }
 
     if (isDefault) {
       this.log(messages.getMessage('info.SetAsDefault', [repo]));
@@ -89,6 +98,7 @@ export default class SourceAdd extends SfCommand<SourceAddResult> {
       repo,
       artifactCount,
       isDefault,
+      autoDiscovered,
     };
   }
 }

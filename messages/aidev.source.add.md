@@ -4,7 +4,7 @@ Add a new source repository.
 
 # description
 
-Adds a new GitHub repository as a source for AI artifacts. The repository must contain a valid `manifest.json` file at the root. The manifest is validated before the source is added.
+Adds a new GitHub repository as a source for AI artifacts. The repository should contain a `manifest.json` file at the root. If no manifest is found, the CLI will attempt to auto-discover artifacts from well-known paths (e.g., `.claude/`, `.github/`, `agents/`, `skills/`, `prompts/`).
 
 # args.repo.summary
 
@@ -55,3 +55,11 @@ Source "%s" has been set as the default.
 # error.RepoRequired
 
 Repository is required. Provide it as a positional argument or use the --repo flag.
+
+# info.AutoDiscovered
+
+No manifest.json found in "%s". Auto-discovered %s artifacts from well-known paths.
+
+# error.NoArtifactsDiscovered
+
+No manifest.json found and no artifacts discovered in well-known paths in repository "%s".

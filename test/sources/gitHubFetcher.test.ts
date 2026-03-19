@@ -121,4 +121,40 @@ describe('GitHubFetcher', () => {
       }
     });
   });
+
+  describe('fetchRepoTree', () => {
+    it('throws RepoNotFound for non-existent repo', async () => {
+      try {
+        await GitHubFetcher.fetchRepoTree('nonexistent-owner-12345/nonexistent-repo-67890');
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).to.be.instanceOf(SfError);
+        expect((error as SfError).name).to.equal('RepoNotFound');
+        expect((error as SfError).message).to.include('not found');
+      }
+    });
+
+    it('throws RepoNotFound with custom branch info', async () => {
+      try {
+        await GitHubFetcher.fetchRepoTree('nonexistent-owner-12345/nonexistent-repo-67890', 'custom-branch');
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).to.be.instanceOf(SfError);
+        expect((error as SfError).name).to.equal('RepoNotFound');
+        expect((error as SfError).message).to.include('custom-branch');
+      }
+    });
+
+    it('uses default branch when not specified', async () => {
+      try {
+        await GitHubFetcher.fetchRepoTree('nonexistent-owner-12345/nonexistent-repo-67890');
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        // The error will be RepoNotFound since the repo doesn't exist
+        // but this exercises the default branch code path
+        expect(error).to.be.instanceOf(SfError);
+        expect((error as SfError).name).to.equal('RepoNotFound');
+      }
+    });
+  });
 });
