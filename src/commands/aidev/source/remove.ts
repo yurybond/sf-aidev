@@ -4,6 +4,7 @@
  * Licensed under the BSD 3-Clause license.
  */
 
+import { Args } from '@oclif/core';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
 import { SourceService } from '../../../services/sourceService.js';
@@ -25,11 +26,18 @@ export default class SourceRemove extends SfCommand<SourceRemoveResult> {
   public static readonly examples = messages.getMessages('examples');
   public static readonly enableJsonFlag = true;
 
+  public static readonly args = {
+    repo: Args.string({
+      description: messages.getMessage('args.repo.summary'),
+      required: false,
+    }),
+  };
+
   public static readonly flags = {
     repo: Flags.string({
       char: 'r',
       summary: messages.getMessage('flags.repo.summary'),
-      required: true,
+      required: false,
     }),
     'no-prompt': Flags.boolean({
       summary: messages.getMessage('flags.no-prompt.summary'),
@@ -38,39 +46,45 @@ export default class SourceRemove extends SfCommand<SourceRemoveResult> {
   };
 
   public async run(): Promise<SourceRemoveResult> {
-    const { flags } = await this.parse(SourceRemove);
+    const { args, flags } = await this.parse(SourceRemove);
+
+    // Resolve repo from positional arg or flag
+    const repo = args.repo ?? flags.repo;
+    if (!repo) {
+      throw new SfError(messages.getMessage('error.RepoRequired'), 'RepoRequiredError');
+    }
 
     const config: AiDevConfig = await AiDevConfig.create({ isGlobal: true });
     const service: SourceService = new SourceService(config);
 
     // Check if source exists
-    if (!service.has(flags.repo)) {
-      throw new SfError(messages.getMessage('error.SourceNotFound', [flags.repo]), 'SourceNotFoundError');
+    if (!service.has(repo)) {
+      throw new SfError(messages.getMessage('error.SourceNotFound', [repo]), 'SourceNotFoundError');
     }
 
     // Check if this is the default source
     const currentDefault: SourceConfig | undefined = service.getDefault();
-    const wasDefault = currentDefault?.repo === flags.repo;
+    const wasDefault = currentDefault?.repo === repo;
 
     // Prompt for confirmation unless --no-prompt
     if (!flags['no-prompt']) {
       const confirmed = await this.confirm({
-        message: messages.getMessage('prompt.ConfirmRemove', [flags.repo]),
+        message: messages.getMessage('prompt.ConfirmRemove', [repo]),
       });
       if (!confirmed) {
         this.log(messages.getMessage('info.Cancelled'));
-        return { repo: flags.repo, removed: false };
+        return { repo, removed: false };
       }
     }
 
     // Remove the source
-    const result = await service.remove(flags.repo);
+    const result = await service.remove(repo);
 
     if (!result.success) {
       throw new SfError(result.error ?? 'Unknown error', 'SourceRemoveError');
     }
 
-    this.log(messages.getMessage('info.SourceRemoved', [flags.repo]));
+    this.log(messages.getMessage('info.SourceRemoved', [repo]));
 
     let newDefault: string | undefined;
 
@@ -89,7 +103,7 @@ export default class SourceRemove extends SfCommand<SourceRemoveResult> {
     }
 
     return {
-      repo: flags.repo,
+      repo,
       removed: true,
       newDefault,
     };

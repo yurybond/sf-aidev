@@ -6,6 +6,10 @@ Remove a configured source repository.
 
 Removes a source repository from the configuration. If the source is currently set as the default, a new default will be automatically selected from the remaining sources.
 
+# args.repo.summary
+
+GitHub repository in owner/repo format to remove.
+
 # flags.repo.summary
 
 GitHub repository in owner/repo format to remove.
@@ -18,11 +22,15 @@ Skip the confirmation prompt.
 
 - Remove a source repository:
 
-  <%= config.bin %> <%= command.id %> --repo owner/repo
+  <%= config.bin %> <%= command.id %> owner/repo
 
 - Remove without confirmation:
 
-  <%= config.bin %> <%= command.id %> --repo owner/repo --no-prompt
+  <%= config.bin %> <%= command.id %> owner/repo --no-prompt
+
+- Using the --repo flag (alternative syntax):
+
+  <%= config.bin %> <%= command.id %> --repo owner/repo
 
 # error.SourceNotFound
 
@@ -43,3 +51,7 @@ Successfully removed source "%s".
 # info.NewDefaultSet
 
 Source "%s" is now set as the default.
+
+# error.RepoRequired
+
+Repository is required. Provide it as a positional argument or use the --repo flag.

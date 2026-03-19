@@ -6,6 +6,10 @@ Add a new source repository.
 
 Adds a new GitHub repository as a source for AI artifacts. The repository must contain a valid `manifest.json` file at the root. The manifest is validated before the source is added.
 
+# args.repo.summary
+
+GitHub repository in owner/repo format.
+
 # flags.repo.summary
 
 GitHub repository in owner/repo format.
@@ -18,11 +22,15 @@ Set this source as the default.
 
 - Add a new source repository:
 
-  <%= config.bin %> <%= command.id %> --repo owner/repo
+  <%= config.bin %> <%= command.id %> owner/repo
 
 - Add a source and set it as default:
 
-  <%= config.bin %> <%= command.id %> --repo owner/repo --set-default
+  <%= config.bin %> <%= command.id %> owner/repo --set-default
+
+- Using the --repo flag (alternative syntax):
+
+  <%= config.bin %> <%= command.id %> --repo owner/repo
 
 # error.InvalidRepoFormat
 
@@ -43,3 +51,7 @@ Successfully added source "%s" with %s artifacts available.
 # info.SetAsDefault
 
 Source "%s" has been set as the default.
+
+# error.RepoRequired
+
+Repository is required. Provide it as a positional argument or use the --repo flag.
