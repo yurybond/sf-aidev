@@ -1,13 +1,13 @@
-# ai-dev
+# sf-aidev
 
-[![NPM](https://img.shields.io/npm/v/ai-dev.svg?label=ai-dev)](https://www.npmjs.com/package/ai-dev) [![Downloads/week](https://img.shields.io/npm/dw/ai-dev.svg)](https://npmjs.org/package/ai-dev) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/salesforcecli/ai-dev/main/LICENSE.txt)
+[![NPM](https://img.shields.io/npm/v/sf-aidev.svg?label=sf-aidev)](https://www.npmjs.com/package/sf-aidev) [![Downloads/week](https://img.shields.io/npm/dw/sf-aidev.svg)](https://npmjs.org/package/sf-aidev) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/salesforcecli/sf-aidev/main/LICENSE.txt)
 
 Salesforce CLI plugin that installs production-ready AI development tool configurations (skills, agents, prompts) from GitHub source repositories. Auto-detects which AI tool is in use, supports multiple tools, and provides unified management commands.
 
 ## Install
 
 ```bash
-sf plugins install ai-dev
+sf plugins install sf-aidev
 ```
 
 ## Quick Start
@@ -224,7 +224,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.{topic}.{name}');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.{topic}.{name}');
 
 export type MyResult = {
   /* fields */

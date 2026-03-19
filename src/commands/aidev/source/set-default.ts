@@ -11,7 +11,7 @@ import { AiDevConfig } from '../../../config/aiDevConfig.js';
 import type { SourceConfig } from '../../../types/config.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.source.set-default');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.source.set-default');
 
 export type SetDefaultResult = {
   repo: string;

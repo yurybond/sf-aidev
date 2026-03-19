@@ -1,5 +1,5 @@
 {
-  "name": "ai-dev",
+  "name": "sf-aidev",
   "description": "Plugin that scaffold Prompt, Agent, Skills configuration for AI-supported development lifecycle for Salesforce Project. Supported formats are: Cloude Code, Codex, Gemini CLI, Github Copilot, Coursor",
   "version": "1.0.0",
   "dependencies": {

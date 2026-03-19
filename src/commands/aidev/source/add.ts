@@ -10,7 +10,7 @@ import { SourceService, type AddSourceResult } from '../../../services/sourceSer
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.source.add');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.source.add');
 
 export type SourceAddResult = {
   repo: string;

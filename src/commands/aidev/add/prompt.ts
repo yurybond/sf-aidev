@@ -10,7 +10,7 @@ import { ArtifactService, type InstallResult } from '../../../services/artifactS
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.add.prompt');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.add.prompt');
 
 export type AddPromptResult = InstallResult;
 
