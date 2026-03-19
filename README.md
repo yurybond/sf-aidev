@@ -208,7 +208,7 @@ sf aidev init
 | Language      | TypeScript 5.x (strict ESM)                        | `tsconfig.json`    |
 | Build         | [Wireit](https://github.com/nicolo-ribaudo/wireit) | `package.json`     |
 | Test          | Mocha + Chai + Sinon                               | `.mocharc.json`    |
-| Coverage      | nyc (90% threshold)                                | `.nycrc`           |
+| Coverage      | c8 (90% threshold)                                 | `.c8rc.json`       |
 | Lint          | ESLint + sf-plugin rules                           | `.eslintrc.cjs`    |
 | Format        | Prettier                                           | `.prettierrc.json` |
 | Git Hooks     | Husky + commitlint + lint-staged                   | `.husky/`          |

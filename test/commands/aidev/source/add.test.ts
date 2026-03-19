@@ -228,6 +228,34 @@ describe('aidev source add', () => {
     });
   });
 
+  describe('edge cases', () => {
+    it('handles success with undefined manifest', async () => {
+      addStub.resolves({
+        success: true,
+        source: { repo: 'owner/repo', isDefault: false, addedAt: '2024-01-01T00:00:00.000Z' },
+        manifest: undefined,
+      });
+
+      const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
+
+      expect(result.artifactCount).to.equal(0);
+      expect(result.isDefault).to.be.false;
+    });
+
+    it('handles success with undefined source', async () => {
+      addStub.resolves({
+        success: true,
+        source: undefined,
+        manifest: sampleManifest,
+      });
+
+      const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
+
+      expect(result.artifactCount).to.equal(2);
+      expect(result.isDefault).to.be.false;
+    });
+  });
+
   describe('command metadata', () => {
     it('has required static properties', () => {
       expect(SourceAdd.summary).to.be.a('string').and.not.be.empty;

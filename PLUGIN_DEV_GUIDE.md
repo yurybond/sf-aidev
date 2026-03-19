@@ -1662,7 +1662,7 @@ You can, of course, test your plugin however you want, although we recommend you
 
 ### Unit Tests
 
-For library-level code, we like to write unit tests using [mocha](https://www.npmjs.com/package/nyc) to run the tests and [nyc](https://www.npmjs.com/package/nyc) for test coverage. You're not limited to this framework - you're welcome to use whatever NodeJS-compatible testing framework works best for you, such as [jest](https://jestjs.io/).
+For library-level code, we like to write unit tests using [mocha](https://www.npmjs.com/package/mocha) to run the tests and [c8](https://www.npmjs.com/package/c8) for test coverage. You're not limited to this framework - you're welcome to use whatever NodeJS-compatible testing framework works best for you, such as [jest](https://jestjs.io/).
 
 Here are some examples of how we use unit tests across our codebases:
 

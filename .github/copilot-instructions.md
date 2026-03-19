@@ -360,7 +360,7 @@ this.warn('This feature is deprecated');
 - **Mocha** - Test runner (configured in `.mocharc.json`)
 - **Chai** - Assertion library
 - **Sinon** - Mocking/stubbing (via `@salesforce/ts-sinon`)
-- **nyc** - Code coverage reporting
+- **c8** - Code coverage reporting (V8-native, ESM-compatible)
 
 **Test Types:**
 
@@ -410,7 +410,7 @@ plugin-name/
 | `.eslintrc.cjs`         | ESLint rules (eslint-config-salesforce-typescript + sf-plugin)     |
 | `.prettierrc.json`      | Prettier config (@salesforce/prettier-config)                      |
 | `.mocharc.json`         | Mocha test runner config (ts-node, 600s timeout)                   |
-| `.nycrc`                | Code coverage thresholds (90% lines/statements/functions/branches) |
+| `.c8rc.json`            | Code coverage thresholds (90% lines/statements/functions/branches) |
 | `.editorconfig`         | Editor settings (2-space indent, UTF-8)                            |
 | `.husky/`               | Git hooks (pre-commit, commit-msg, pre-push)                       |
 | `.lintstagedrc.cjs`     | Lint-staged config for pre-commit formatting                       |
