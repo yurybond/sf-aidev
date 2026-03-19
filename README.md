@@ -16,7 +16,10 @@ sf plugins install sf-aidev
 # Initialize — detects your AI tool, configures source, installs artifacts
 sf aidev init
 
-# Add individual artifacts
+# Interactive multi-select picker (browse and select multiple artifacts)
+sf aidev add
+
+# Or add individual artifacts by name
 sf aidev add skill --name apex-review
 sf aidev add agent --name code-helper
 sf aidev add prompt --name deploy-checklist
@@ -44,6 +47,21 @@ sf aidev init --no-install --no-prompt
 | `--source`     | `-s` | Source repository in `owner/repo` format.                         |
 | `--no-install` |      | Skip artifact installation, only configure tool and source.       |
 | `--no-prompt`  |      | Skip confirmation prompts (for scripting).                        |
+
+### `sf aidev add`
+
+Interactively select and install multiple artifacts at once. Displays a multi-select picker with artifacts grouped by category (Agents, Skills, Prompts).
+
+```bash
+sf aidev add
+sf aidev add --source owner/repo
+```
+
+| Flag       | Char | Description                                       |
+| ---------- | ---- | ------------------------------------------------- |
+| `--source` | `-s` | Filter artifacts to a specific source repository. |
+
+**Note:** This command requires an interactive terminal. For non-interactive use (scripts, CI/CD), use the subcommands below.
 
 ### `sf aidev add skill|agent|prompt`
 
@@ -155,6 +173,7 @@ Source repositories must contain a `manifest.json` at the root:
 src/
 ├── commands/aidev/          # CLI command implementations
 │   ├── init.ts
+│   ├── add.ts               # Interactive multi-select add command
 │   ├── add/                 # skill.ts, agent.ts, prompt.ts
 │   ├── remove/              # skill.ts, agent.ts, prompt.ts
 │   ├── list/                # artifacts.ts
