@@ -39,8 +39,9 @@ export default class RemovePrompt extends SfCommand<RemovePromptResult> {
   public async run(): Promise<RemovePromptResult> {
     const { flags } = await this.parse(RemovePrompt);
 
-    const config = await AiDevConfig.create({ isGlobal: false });
-    const service = new ArtifactService(config, process.cwd());
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
     // Check if prompt is installed
     if (!service.isInstalled(flags.name, 'prompt')) {

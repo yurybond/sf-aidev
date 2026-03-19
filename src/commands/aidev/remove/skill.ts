@@ -39,8 +39,9 @@ export default class RemoveSkill extends SfCommand<RemoveSkillResult> {
   public async run(): Promise<RemoveSkillResult> {
     const { flags } = await this.parse(RemoveSkill);
 
-    const config = await AiDevConfig.create({ isGlobal: false });
-    const service = new ArtifactService(config, process.cwd());
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
     // Check if skill is installed
     if (!service.isInstalled(flags.name, 'skill')) {

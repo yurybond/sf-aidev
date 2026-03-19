@@ -50,16 +50,27 @@ export interface ListOptions {
 /**
  * Service layer for artifact operations.
  * Coordinates detection, fetching, and installation of AI tool artifacts.
+ *
+ * Uses two separate configs:
+ * - sourceConfig: Global config (~/.sf/sf-aidev.json) for reading source repositories
+ * - projectConfig: Local config (.sf/sf-aidev.json) for installed artifacts and tool settings
  */
 export class ArtifactService {
-  private config: AiDevConfig;
+  private sourceConfig: AiDevConfig;
+  private projectConfig: AiDevConfig;
   private projectPath: string;
   private fetcher: typeof GitHubFetcher;
   private installers: Map<ArtifactType, Installer>;
   private manifestCache: Map<string, Manifest> = new Map();
 
-  public constructor(config: AiDevConfig, projectPath: string, fetcher: typeof GitHubFetcher = GitHubFetcher) {
-    this.config = config;
+  public constructor(
+    sourceConfig: AiDevConfig,
+    projectConfig: AiDevConfig,
+    projectPath: string,
+    fetcher: typeof GitHubFetcher = GitHubFetcher
+  ) {
+    this.sourceConfig = sourceConfig;
+    this.projectConfig = projectConfig;
     this.projectPath = projectPath;
     this.fetcher = fetcher;
     this.installers = new Map([
@@ -78,8 +89,8 @@ export class ArtifactService {
     if (setActive && detected.length > 0) {
       // Prefer copilot if both detected, otherwise use first
       const tool = detected.includes('copilot') ? 'copilot' : detected[0];
-      this.config.setTool(tool);
-      await this.config.write();
+      this.projectConfig.setTool(tool);
+      await this.projectConfig.write();
     }
 
     return detected;
@@ -89,24 +100,24 @@ export class ArtifactService {
    * Get the currently active tool
    */
   public getActiveTool(): string | undefined {
-    return this.config.getTool();
+    return this.projectConfig.getTool();
   }
 
   /**
    * Set the active tool
    */
   public async setActiveTool(tool: string): Promise<void> {
-    this.config.setTool(tool);
-    await this.config.write();
+    this.projectConfig.setTool(tool);
+    await this.projectConfig.write();
   }
 
   /**
    * List available artifacts from configured sources
    */
   public async listAvailable(options: ListOptions = {}): Promise<AvailableArtifact[]> {
-    const sources = this.config.getSources();
-    const installed = this.config.getInstalledArtifacts();
-    const activeTool = options.tool ?? this.config.getTool();
+    const sources = this.sourceConfig.getSources();
+    const installed = this.projectConfig.getInstalledArtifacts();
+    const activeTool = options.tool ?? this.projectConfig.getTool();
 
     const sourcesToQuery = options.source ? sources.filter((s) => s.repo === options.source) : sources;
 
@@ -145,7 +156,7 @@ export class ArtifactService {
     artifactName: string,
     options: { source?: string; type?: ArtifactType; tool?: string } = {}
   ): Promise<InstallResult> {
-    const tool = options.tool ?? this.config.getTool();
+    const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
       return {
         success: false,
@@ -194,8 +205,8 @@ export class ArtifactService {
         source: source.repo,
         installedAt: new Date().toISOString(),
       };
-      this.config.addInstalledArtifact(installedArtifact);
-      await this.config.write();
+      this.projectConfig.addInstalledArtifact(installedArtifact);
+      await this.projectConfig.write();
 
       return {
         success: true,
@@ -223,7 +234,7 @@ export class ArtifactService {
     artifactName: string,
     options: { type?: ArtifactType; tool?: string } = {}
   ): Promise<{ success: boolean; error?: string }> {
-    const tool = options.tool ?? this.config.getTool();
+    const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
       return {
         success: false,
@@ -231,7 +242,7 @@ export class ArtifactService {
       };
     }
 
-    const installed = this.config.getInstalledArtifacts();
+    const installed = this.projectConfig.getInstalledArtifacts();
     const record = installed.find((i) => i.name === artifactName && (!options.type || i.type === options.type));
 
     if (!record) {
@@ -251,8 +262,8 @@ export class ArtifactService {
 
     try {
       await installer.uninstall(artifactName, tool, this.projectPath);
-      this.config.removeInstalledArtifact(artifactName, record.type);
-      await this.config.write();
+      this.projectConfig.removeInstalledArtifact(artifactName, record.type);
+      await this.projectConfig.write();
 
       return { success: true };
     } catch (error) {
@@ -267,7 +278,7 @@ export class ArtifactService {
    * List installed artifacts
    */
   public listInstalled(options: { type?: ArtifactType } = {}): InstalledArtifact[] {
-    const installed = this.config.getInstalledArtifacts();
+    const installed = this.projectConfig.getInstalledArtifacts();
 
     if (options.type) {
       return installed.filter((i) => i.type === options.type);
@@ -280,7 +291,7 @@ export class ArtifactService {
    * Check if an artifact is installed
    */
   public isInstalled(name: string, type?: ArtifactType): boolean {
-    const installed = this.config.getInstalledArtifacts();
+    const installed = this.projectConfig.getInstalledArtifacts();
     return installed.some((i) => i.name === name && (!type || i.type === type));
   }
 
@@ -288,7 +299,7 @@ export class ArtifactService {
    * Verify installed artifacts still exist on disk
    */
   public async verifyInstalled(): Promise<Array<{ artifact: InstalledArtifact; exists: boolean }>> {
-    const installed = this.config.getInstalledArtifacts();
+    const installed = this.projectConfig.getInstalledArtifacts();
 
     return Promise.all(
       installed.map(async (artifact) => {
@@ -328,7 +339,7 @@ export class ArtifactService {
     sourceRepo?: string,
     type?: ArtifactType
   ): Promise<{ artifact?: Artifact; source?: SourceConfig }> {
-    const sources = this.config.getSources();
+    const sources = this.sourceConfig.getSources();
     const sourcesToSearch = sourceRepo ? sources.filter((s) => s.repo === sourceRepo) : sources;
 
     for (const source of sourcesToSearch) {

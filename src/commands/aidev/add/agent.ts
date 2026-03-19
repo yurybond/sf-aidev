@@ -35,8 +35,9 @@ export default class AddAgent extends SfCommand<AddAgentResult> {
   public async run(): Promise<AddAgentResult> {
     const { flags } = await this.parse(AddAgent);
 
-    const config: AiDevConfig = await AiDevConfig.create({ isGlobal: false });
-    const service: ArtifactService = new ArtifactService(config, process.cwd());
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
     const result: InstallResult = await service.install(flags.name, { type: 'agent', source: flags.source });
 
