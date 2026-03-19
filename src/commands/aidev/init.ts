@@ -63,7 +63,7 @@ export default class Init extends SfCommand<InitResult> {
 
     const globalConfig = await AiDevConfig.create({ isGlobal: true });
     const localConfig = await AiDevConfig.create({ isGlobal: false });
-    const artifactService = new ArtifactService(localConfig, projectPath);
+    const artifactService = new ArtifactService(globalConfig, localConfig, projectPath);
     const sourceService = new SourceService(globalConfig);
 
     await artifactService.setActiveTool(selectedTool);
