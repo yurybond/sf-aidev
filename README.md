@@ -92,7 +92,7 @@ sf aidev list artifacts --source owner/repo
 | `--available` | `-a` | Show only available artifacts from sources.      |
 | `--source`    | `-s` | Filter available artifacts by source repository. |
 
-### `sf aidev source add|remove|list|set-default`
+### `sf aidev source add|remove|list|set-default|refresh`
 
 Manage source repositories that provide artifacts.
 
@@ -101,6 +101,8 @@ sf aidev source add owner/repo --set-default
 sf aidev source list
 sf aidev source remove owner/repo
 sf aidev source set-default owner/repo
+sf aidev source refresh
+sf aidev source refresh owner/repo
 ```
 
 | Command              | Arguments / Flags                                   |
@@ -109,8 +111,11 @@ sf aidev source set-default owner/repo
 | `source remove`      | `REPO` (positional), `--repo` `-r`, `--no-prompt`   |
 | `source list`        | _(none)_                                            |
 | `source set-default` | `REPO` (positional), `--repo` `-r`                  |
+| `source refresh`     | `REPO` (positional, optional), `--repo` `-r`        |
 
 The `REPO` argument (in `owner/repo` format) can be provided as a positional argument or via the `--repo` flag.
+
+The `source refresh` command re-fetches manifests from GitHub and updates the local cache. For repositories without a `manifest.json`, it re-runs auto-discovery. Use this command when source repositories have been updated.
 
 All commands support `--json` for machine-readable output.
 

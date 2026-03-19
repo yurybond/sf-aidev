@@ -7,8 +7,10 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { expect } from 'chai';
+import sinon from 'sinon';
 import { AiDevConfig } from '../../src/config/aiDevConfig.js';
 import { ArtifactService } from '../../src/services/artifactService.js';
+import { ManifestCache } from '../../src/sources/manifestCache.js';
 import type { Manifest } from '../../src/types/manifest.js';
 
 describe('ArtifactService', () => {
@@ -17,6 +19,7 @@ describe('ArtifactService', () => {
   let projectConfig: AiDevConfig;
   let service: ArtifactService;
   let installedFiles: string[] = [];
+  let sandbox: sinon.SinonSandbox;
 
   const testManifest: Manifest = {
     version: '1.0.0',
@@ -50,10 +53,14 @@ describe('ArtifactService', () => {
   } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
   beforeEach(async () => {
+    sandbox = sinon.createSandbox();
     tempDir = path.join(process.cwd(), '.test-artifact-service-' + Date.now());
     await fs.mkdir(tempDir, { recursive: true });
     await fs.mkdir(path.join(tempDir, '.sf'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.github'), { recursive: true });
+
+    // Use test cache directory for ManifestCache
+    ManifestCache.setTestCacheDir(path.join(tempDir, '.sf', 'sf-aidev-manifests'));
 
     // Create Copilot indicator file
     await fs.writeFile(path.join(tempDir, '.github', 'copilot-instructions.md'), '# Copilot');
@@ -80,6 +87,8 @@ describe('ArtifactService', () => {
   });
 
   afterEach(async () => {
+    sandbox.restore();
+    ManifestCache.setTestCacheDir(undefined);
     try {
       await Promise.all(
         installedFiles.map(async (file) => {
@@ -516,6 +525,62 @@ describe('ArtifactService', () => {
       // Should find artifact in test/repo after failing/repo fails
       expect(result.success).to.be.true;
       expect(fetchCount).to.be.greaterThan(0);
+    });
+  });
+
+  describe('disk cache fallback', () => {
+    it('uses disk cache when GitHub fetch fails', async () => {
+      // Pre-populate disk cache
+      await ManifestCache.save('test/repo', testManifest, false);
+
+      // Create service with failing fetcher
+      const failingFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new Error('Network error');
+        },
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const failingService = new ArtifactService(sourceConfig, projectConfig, tempDir, failingFetcher);
+
+      // Should still get artifacts from disk cache
+      const artifacts = await failingService.listAvailable();
+      expect(artifacts).to.have.length(3);
+    });
+
+    it('throws when no cache available and fetch fails', async () => {
+      // Create service with failing fetcher (no disk cache)
+      const failingFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new Error('Network error');
+        },
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const failingService = new ArtifactService(sourceConfig, projectConfig, tempDir, failingFetcher);
+
+      // listAvailable catches errors and returns empty, but getManifest should throw
+      // We test through listAvailable which catches the error
+      const artifacts = await failingService.listAvailable();
+      expect(artifacts).to.be.an('array').that.is.empty;
+    });
+
+    it('updates disk cache when fetch succeeds', async () => {
+      // Ensure the cache directory exists
+      const cacheDir = ManifestCache.getCacheDir();
+      await fs.mkdir(cacheDir, { recursive: true });
+
+      // First call should populate cache
+      await service.listAvailable();
+
+      // Wait a bit for the async cache save to complete
+      // (getManifest fires save() without awaiting)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Verify cache was saved
+      const cached = await ManifestCache.load('test/repo');
+      expect(cached).to.not.be.undefined;
+      expect(cached?.manifest.artifacts).to.have.length(3);
     });
   });
 });
