@@ -7,6 +7,7 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { expect } from 'chai';
+import { SfError } from '@salesforce/core';
 import { AiDevConfig } from '../../src/config/aiDevConfig.js';
 import { SourceService } from '../../src/services/sourceService.js';
 import type { Manifest } from '../../src/types/manifest.js';
@@ -309,6 +310,85 @@ describe('SourceService', () => {
       service.clearHealthCache();
 
       expect(service.getCachedHealth('user/repo')).to.be.undefined;
+    });
+  });
+
+  describe('auto-discovery fallback', () => {
+    it('auto-discovers artifacts when manifest not found', async () => {
+      const manifestNotFoundFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new SfError('Manifest not found', 'ManifestNotFound');
+        },
+        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test-skill.md', '.github/agents/test-agent.md'],
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const testService = new SourceService(config, manifestNotFoundFetcher);
+      const result = await testService.add('user/repo');
+
+      expect(result.success).to.be.true;
+      expect(result.autoDiscovered).to.be.true;
+      expect(result.manifest?.artifacts).to.have.length(2);
+      expect(result.manifest?.version).to.equal('auto');
+    });
+
+    it('returns error when no artifacts discovered', async () => {
+      const noArtifactsFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new SfError('Manifest not found', 'ManifestNotFound');
+        },
+        fetchRepoTree: async (): Promise<string[]> => ['README.md', 'src/index.ts'],
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const testService = new SourceService(config, noArtifactsFetcher);
+      const result = await testService.add('user/repo');
+
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('no artifacts discovered');
+    });
+
+    it('returns original error when tree fetch fails', async () => {
+      const treeFetchFailsFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new SfError('Manifest not found', 'ManifestNotFound');
+        },
+        fetchRepoTree: async (): Promise<string[]> => {
+          throw new SfError('Rate limit exceeded', 'RateLimitExceeded');
+        },
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const testService = new SourceService(config, treeFetchFailsFetcher);
+      const result = await testService.add('user/repo');
+
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('Failed to fetch manifest');
+    });
+
+    it('does not auto-discover when other errors occur', async () => {
+      const networkErrorFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new SfError('Network error', 'NetworkError');
+        },
+        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test.md'],
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const testService = new SourceService(config, networkErrorFetcher);
+      const result = await testService.add('user/repo');
+
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('Failed to fetch manifest');
+      // Should not attempt auto-discovery for network errors
+      expect(result.autoDiscovered).to.be.undefined;
+    });
+
+    it('sets autoDiscovered to false when manifest exists', async () => {
+      const result = await service.add('user/repo');
+
+      expect(result.success).to.be.true;
+      expect(result.autoDiscovered).to.be.false;
     });
   });
 });
