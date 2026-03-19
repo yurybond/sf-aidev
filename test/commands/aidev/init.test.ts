@@ -46,7 +46,12 @@ describe('aidev init', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    // Stub AiDevConfig.create to return different mock configs for global and local
+    sandbox
+      .stub(AiDevConfig, 'create')
+      .callsFake(
+        async (options?: { isGlobal?: boolean }) => ({ isGlobal: options?.isGlobal ?? false } as unknown as AiDevConfig)
+      );
     detectAllStub = sandbox.stub(DetectorRegistry, 'detectAll');
     setActiveToolStub = sandbox.stub(ArtifactService.prototype, 'setActiveTool').resolves();
     listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailable');
