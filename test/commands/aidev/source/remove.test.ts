@@ -50,7 +50,20 @@ describe('aidev source remove', () => {
   });
 
   describe('successful removal', () => {
-    it('removes a non-default source with --no-prompt', async () => {
+    it('removes a non-default source with positional arg and --no-prompt', async () => {
+      hasStub.returns(true);
+      getDefaultStub.returns(otherSource);
+      removeStub.resolves({ success: true });
+      listStub.returns([otherSource]);
+
+      const result = await SourceRemove.run(['owner/repo', '--no-prompt'], oclifConfig);
+
+      expect(result.repo).to.equal('owner/repo');
+      expect(result.removed).to.be.true;
+      expect(removeStub.calledOnce).to.be.true;
+    });
+
+    it('removes a non-default source with --repo flag and --no-prompt', async () => {
       hasStub.returns(true);
       getDefaultStub.returns(otherSource);
       removeStub.resolves({ success: true });
@@ -73,6 +86,18 @@ describe('aidev source remove', () => {
 
       expect(result.repo).to.equal('owner/repo');
       expect(result.removed).to.be.true;
+    });
+
+    it('positional arg takes precedence over --repo flag', async () => {
+      hasStub.returns(true);
+      getDefaultStub.returns(otherSource);
+      removeStub.resolves({ success: true });
+      listStub.returns([otherSource]);
+
+      const result = await SourceRemove.run(['positional/repo', '--repo', 'flag/repo', '--no-prompt'], oclifConfig);
+
+      expect(result.repo).to.equal('positional/repo');
+      expect(hasStub.firstCall.args[0]).to.equal('positional/repo');
     });
 
     it('returns new default when default source is removed', async () => {
@@ -150,6 +175,18 @@ describe('aidev source remove', () => {
   });
 
   describe('error handling', () => {
+    it('throws SfError when neither arg nor flag provided', async () => {
+      const cmd = new SourceRemove(['--no-prompt'], oclifConfig);
+
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown SfError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).message).to.include('Repository is required');
+      }
+    });
+
     it('throws SfError when source not found', async () => {
       hasStub.returns(false);
 
@@ -210,8 +247,13 @@ describe('aidev source remove', () => {
       expect(SourceRemove.flags).to.have.property('no-prompt');
     });
 
-    it('repo flag is required', () => {
-      expect(SourceRemove.flags.repo.required).to.be.true;
+    it('repo flag is not required (positional arg can be used instead)', () => {
+      expect(SourceRemove.flags.repo.required).to.be.false;
+    });
+
+    it('has args definition for positional repo', () => {
+      expect(SourceRemove.args).to.have.property('repo');
+      expect(SourceRemove.args.repo.required).to.be.false;
     });
 
     it('no-prompt flag defaults to false', () => {
