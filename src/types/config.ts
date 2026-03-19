@@ -37,7 +37,7 @@ export interface InstalledArtifact extends JsonMap {
 }
 
 /**
- * Schema for the sf-aidev configuration file (ai-dev.json).
+ * Schema for the sf-aidev configuration file (sf-aidev.json).
  */
 export interface AiDevConfigOptions extends JsonMap {
   /** Selected AI tool (e.g., 'copilot', 'claude') */
