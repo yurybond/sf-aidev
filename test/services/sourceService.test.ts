@@ -7,15 +7,18 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { expect } from 'chai';
+import sinon from 'sinon';
 import { SfError } from '@salesforce/core';
 import { AiDevConfig } from '../../src/config/aiDevConfig.js';
 import { SourceService } from '../../src/services/sourceService.js';
+import { ManifestCache } from '../../src/sources/manifestCache.js';
 import type { Manifest } from '../../src/types/manifest.js';
 
 describe('SourceService', () => {
   let tempDir: string;
   let config: AiDevConfig;
   let service: SourceService;
+  let sandbox: sinon.SinonSandbox;
 
   const testManifest: Manifest = {
     version: '1.0.0',
@@ -50,9 +53,13 @@ describe('SourceService', () => {
   } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
   beforeEach(async () => {
+    sandbox = sinon.createSandbox();
     tempDir = path.join(process.cwd(), '.test-source-service-' + Date.now());
     await fs.mkdir(tempDir, { recursive: true });
     await fs.mkdir(path.join(tempDir, '.sf'), { recursive: true });
+
+    // Use test cache directory for ManifestCache
+    ManifestCache.setTestCacheDir(path.join(tempDir, '.sf', 'sf-aidev-manifests'));
 
     config = await AiDevConfig.create({
       isGlobal: false,
@@ -63,6 +70,8 @@ describe('SourceService', () => {
   });
 
   afterEach(async () => {
+    sandbox.restore();
+    ManifestCache.setTestCacheDir(undefined);
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
     } catch {
@@ -389,6 +398,59 @@ describe('SourceService', () => {
 
       expect(result.success).to.be.true;
       expect(result.autoDiscovered).to.be.false;
+    });
+  });
+
+  describe('manifest cache persistence', () => {
+    it('saves manifest to disk cache on add', async () => {
+      const result = await service.add('user/repo');
+
+      expect(result.success).to.be.true;
+
+      // Verify manifest was saved to disk
+      const cached = await ManifestCache.load('user/repo');
+      expect(cached).to.not.be.undefined;
+      expect(cached?.manifest).to.deep.equal(testManifest);
+      expect(cached?.autoDiscovered).to.be.false;
+    });
+
+    it('saves auto-discovered manifest with correct flag', async () => {
+      const manifestNotFoundFetcher = {
+        fetchManifest: async (): Promise<Manifest> => {
+          throw new SfError('Manifest not found', 'ManifestNotFound');
+        },
+        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test-skill.md'],
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const testService = new SourceService(config, manifestNotFoundFetcher);
+      await testService.add('user/repo');
+
+      const cached = await ManifestCache.load('user/repo');
+      expect(cached?.autoDiscovered).to.be.true;
+    });
+
+    it('removes manifest cache on source removal', async () => {
+      await service.add('user/repo');
+
+      // Verify cache exists
+      let cached = await ManifestCache.load('user/repo');
+      expect(cached).to.not.be.undefined;
+
+      // Remove source
+      await service.remove('user/repo');
+
+      // Verify cache was removed
+      cached = await ManifestCache.load('user/repo');
+      expect(cached).to.be.undefined;
+    });
+
+    it('does not save cache when skipValidation is true', async () => {
+      const failingService = new SourceService(config, failingFetcher);
+      await failingService.add('user/repo', { skipValidation: true });
+
+      const cached = await ManifestCache.load('user/repo');
+      expect(cached).to.be.undefined;
     });
   });
 });
