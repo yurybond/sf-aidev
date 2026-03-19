@@ -39,8 +39,9 @@ export default class RemoveAgent extends SfCommand<RemoveAgentResult> {
   public async run(): Promise<RemoveAgentResult> {
     const { flags } = await this.parse(RemoveAgent);
 
-    const config = await AiDevConfig.create({ isGlobal: false });
-    const service = new ArtifactService(config, process.cwd());
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
     // Check if agent is installed
     if (!service.isInstalled(flags.name, 'agent')) {

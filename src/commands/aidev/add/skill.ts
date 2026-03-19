@@ -35,8 +35,9 @@ export default class AddSkill extends SfCommand<AddSkillResult> {
   public async run(): Promise<AddSkillResult> {
     const { flags } = await this.parse(AddSkill);
 
-    const config = await AiDevConfig.create({ isGlobal: false });
-    const service = new ArtifactService(config, process.cwd());
+    const globalConfig = await AiDevConfig.create({ isGlobal: true });
+    const localConfig = await AiDevConfig.create({ isGlobal: false });
+    const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
     const result = await service.install(flags.name, { type: 'skill', source: flags.source });
 
