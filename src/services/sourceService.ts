@@ -8,6 +8,7 @@ import { SfError } from '@salesforce/core';
 import { AiDevConfig } from '../config/aiDevConfig.js';
 import { GitHubFetcher } from '../sources/gitHubFetcher.js';
 import { ManifestBuilder } from '../sources/manifestBuilder.js';
+import { ManifestCache } from '../sources/manifestCache.js';
 import { SourceManager } from '../sources/sourceManager.js';
 import type { Manifest } from '../types/manifest.js';
 import type { SourceConfig } from '../types/config.js';
@@ -112,6 +113,11 @@ export class SourceService {
     try {
       await this.manager.add(repo, options.isDefault);
 
+      // Persist manifest to disk cache if we have one
+      if (manifest) {
+        await ManifestCache.save(repo, manifest, autoDiscovered);
+      }
+
       const source = this.config.getSources().find((s) => s.repo === repo);
       return {
         success: true,
@@ -134,6 +140,8 @@ export class SourceService {
     try {
       await this.manager.remove(repo);
       this.healthCache.delete(repo);
+      // Remove cached manifest from disk
+      await ManifestCache.remove(repo);
       return { success: true };
     } catch (error) {
       return {

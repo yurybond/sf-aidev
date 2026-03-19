@@ -12,6 +12,7 @@ import { PromptInstaller } from '../installers/promptInstaller.js';
 import { SkillInstaller } from '../installers/skillInstaller.js';
 import type { Installer } from '../installers/installer.js';
 import { GitHubFetcher } from '../sources/gitHubFetcher.js';
+import { ManifestCache } from '../sources/manifestCache.js';
 import type { Artifact, ArtifactType, Manifest } from '../types/manifest.js';
 import type { InstalledArtifact, SourceConfig } from '../types/config.js';
 
@@ -324,14 +325,56 @@ export class ArtifactService {
   private async getManifest(source: SourceConfig): Promise<Manifest> {
     const cacheKey = source.repo;
 
+    // Check in-memory cache first
     if (this.manifestCache.has(cacheKey)) {
       return this.manifestCache.get(cacheKey)!;
     }
 
-    const manifest = await this.fetcher.fetchManifest(source.repo);
-    this.manifestCache.set(cacheKey, manifest);
+    // Try to fetch from GitHub
+    try {
+      const manifest = await this.fetcher.fetchManifest(source.repo);
+      this.manifestCache.set(cacheKey, manifest);
 
-    return manifest;
+      // Update disk cache with fresh data (don't await to avoid blocking)
+      ManifestCache.save(source.repo, manifest, false).catch(() => {
+        // Silently ignore disk cache write failures
+      });
+
+      return manifest;
+    } catch {
+      // Fall back to disk cache
+      const cached = await ManifestCache.load(source.repo);
+      if (cached) {
+        this.manifestCache.set(cacheKey, cached.manifest);
+
+        // If cache is stale, try to refresh in background (non-blocking)
+        if (await ManifestCache.isStale(source.repo)) {
+          this.refreshCacheInBackground(source.repo);
+        }
+
+        return cached.manifest;
+      }
+
+      // No cache available, re-throw
+      throw new Error(`No manifest available for ${source.repo}`);
+    }
+  }
+
+  /**
+   * Attempt to refresh a stale cache in the background.
+   * Does not block or throw - failures are silently ignored.
+   */
+  private refreshCacheInBackground(repo: string): void {
+    // Fire and forget - refresh cache without blocking
+    this.fetcher
+      .fetchManifest(repo)
+      .then(async (manifest) => {
+        await ManifestCache.save(repo, manifest, false);
+        this.manifestCache.set(repo, manifest);
+      })
+      .catch(() => {
+        // Silently ignore refresh failures - we'll use the stale cache
+      });
   }
 
   private async findArtifact(
