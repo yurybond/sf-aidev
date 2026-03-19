@@ -4,7 +4,7 @@ Remove an installed agent.
 
 # description
 
-Remove a previously installed agent from your project. The agent files will be deleted and unregistered from the ai-dev configuration. By default, a confirmation prompt is shown before removal.
+Remove a previously installed agent from your project. The agent files will be deleted and unregistered from the sf-aidev configuration. By default, a confirmation prompt is shown before removal.
 
 # flags.name.summary
 

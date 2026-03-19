@@ -4,7 +4,7 @@ Remove an installed skill.
 
 # description
 
-Remove a previously installed skill from your project. The skill file will be deleted and unregistered from the ai-dev configuration. By default, a confirmation prompt is shown before removal.
+Remove a previously installed skill from your project. The skill file will be deleted and unregistered from the sf-aidev configuration. By default, a confirmation prompt is shown before removal.
 
 # flags.name.summary
 

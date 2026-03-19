@@ -12,12 +12,12 @@ import type { InstalledArtifact } from '../../../types/config.js';
 import type { ArtifactType } from '../../../types/manifest.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.list.artifacts');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.list.artifacts');
 
 export type ListArtifactsResult = {
   installed: InstalledArtifact[];
   available: AvailableArtifact[];
-}
+};
 
 export default class ListArtifacts extends SfCommand<ListArtifactsResult> {
   public static readonly summary = messages.getMessage('summary');

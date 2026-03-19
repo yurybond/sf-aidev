@@ -11,7 +11,7 @@ import { AiDevConfig } from '../../../config/aiDevConfig.js';
 import type { SourceConfig } from '../../../types/config.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.source.remove');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.source.remove');
 
 export type SourceRemoveResult = {
   repo: string;

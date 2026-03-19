@@ -10,7 +10,7 @@ import { ArtifactService } from '../../../services/artifactService.js';
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.remove.prompt');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.remove.prompt');
 
 export interface RemovePromptResult {
   success: boolean;

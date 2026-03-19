@@ -12,7 +12,7 @@ import { AiDevConfig } from '../../config/aiDevConfig.js';
 import { DetectorRegistry } from '../../detectors/registry.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.init');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.init');
 
 export type InitResult = {
   tool: string;

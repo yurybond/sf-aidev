@@ -9,7 +9,7 @@ import { ConfigFile } from '@salesforce/core';
 import { InstalledArtifact, SourceConfig } from '../types/config.js';
 
 /**
- * Configuration file for ai-dev plugin.
+ * Configuration file for sf-aidev plugin.
  * Stores source repositories, installed artifacts, and tool preferences.
  */
 export class AiDevConfig extends ConfigFile<ConfigFile.Options> {

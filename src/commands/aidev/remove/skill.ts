@@ -10,13 +10,13 @@ import { ArtifactService } from '../../../services/artifactService.js';
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('ai-dev', 'aidev.remove.skill');
+const messages = Messages.loadMessages('sf-aidev', 'aidev.remove.skill');
 
 export type RemoveSkillResult = {
   success: boolean;
   name: string;
   error?: string;
-}
+};
 
 export default class RemoveSkill extends SfCommand<RemoveSkillResult> {
   public static readonly summary = messages.getMessage('summary');
