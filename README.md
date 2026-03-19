@@ -92,23 +92,39 @@ sf aidev remove agent --name my-agent --no-prompt
 | `--name`      | `-n` | **(Required)** Name of the artifact to remove. |
 | `--no-prompt` |      | Skip the confirmation prompt.                  |
 
-### `sf aidev list artifacts`
+### `sf aidev list`
 
-List installed and available artifacts.
+Display a unified view of all AI artifacts in your project, grouped by type with checkboxes indicating installation status:
+
+- ☑ (checked) - artifact exists locally
+- ☐ (unchecked) - artifact is available from source but not installed
 
 ```bash
-sf aidev list artifacts
-sf aidev list artifacts --installed
-sf aidev list artifacts --available --type skill
-sf aidev list artifacts --source owner/repo
+sf aidev list
+sf aidev list --source owner/repo
 ```
 
-| Flag          | Char | Description                                      |
-| ------------- | ---- | ------------------------------------------------ |
-| `--type`      | `-t` | Filter by type: `skill`, `agent`, or `prompt`.   |
-| `--installed` | `-i` | Show only installed artifacts.                   |
-| `--available` | `-a` | Show only available artifacts from sources.      |
-| `--source`    | `-s` | Filter available artifacts by source repository. |
+| Flag       | Char | Description                                      |
+| ---------- | ---- | ------------------------------------------------ |
+| `--source` | `-s` | Filter available artifacts by source repository. |
+
+### `sf aidev list agents|skills|instructions`
+
+List artifacts filtered by type.
+
+```bash
+sf aidev list agents
+sf aidev list skills --source owner/repo
+sf aidev list instructions
+```
+
+| Command             | Description                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `list agents`       | Show only agents. Merges local and source manifest.                                                        |
+| `list skills`       | Show only skills. Merges local and source manifest.                                                        |
+| `list instructions` | Show local instruction files (CLAUDE.md, CURSOR.md, CODEX.md, copilot-instructions.md, \*.instructions.md) |
+
+The `agents` and `skills` subcommands support the `--source` flag. The `instructions` command is local-only.
 
 ### `sf aidev source add|remove|list|set-default|refresh`
 
