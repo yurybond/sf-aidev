@@ -10,6 +10,7 @@ import { checkbox, Separator } from '@inquirer/prompts';
 import { ArtifactService, type InstallResult, type AvailableArtifact } from '../../services/artifactService.js';
 import { AiDevConfig } from '../../config/aiDevConfig.js';
 import type { ArtifactType } from '../../types/manifest.js';
+import { CHECKBOX_THEME } from '../../ui/interactivePrompts.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-aidev', 'aidev.add');
@@ -181,6 +182,7 @@ export default class Add extends SfCommand<AddResult> {
 
   /**
    * Prompt user with a multi-select checkbox.
+   * Returns empty array if user cancels (Escape/Ctrl+C).
    * Extracted as a protected method to allow stubbing in tests.
    */
   protected async promptCheckbox(
@@ -190,11 +192,20 @@ export default class Add extends SfCommand<AddResult> {
     // Use this.spinner to satisfy class-methods-use-this rule
     // The spinner is already stopped before this method is called
     void this.spinner;
-    return checkbox<AvailableArtifact>({
-      message,
-      choices,
-      pageSize: 15,
-    });
+    try {
+      return await checkbox<AvailableArtifact>({
+        message,
+        choices,
+        pageSize: 15,
+        theme: CHECKBOX_THEME,
+      });
+    } catch (error) {
+      // Handle user cancellation (Escape/Ctrl+C)
+      if (error instanceof Error && error.name === 'ExitPromptError') {
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
