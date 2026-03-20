@@ -9,10 +9,21 @@ import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScan
 import type { ArtifactType } from '../types/manifest.js';
 
 /**
- * Checkbox characters for display.
+ * Square checkbox characters for consistent display.
  */
-const CHECKBOX_CHECKED = '\u2611'; // Checked box
-const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box
+const CHECKBOX_CHECKED = '\u2611'; // Checked box (filled square)
+const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
+
+/**
+ * Custom theme for @inquirer/checkbox prompt with square checkboxes.
+ */
+export const CHECKBOX_THEME = {
+  icon: {
+    checked: CHECKBOX_CHECKED,
+    unchecked: CHECKBOX_UNCHECKED,
+    cursor: '\u25B6', // Right-pointing triangle as cursor
+  },
+} as const;
 
 /**
  * Action types for the artifact action menu.
@@ -52,14 +63,27 @@ function isExitPromptError(error: unknown): boolean {
 
 /**
  * Format artifact display name with installation status indicator.
+ * Used for select prompts where we need to show status visually.
  *
  * @param artifact - The artifact to format.
- * @returns Formatted display string.
+ * @returns Formatted display string with checkbox icon.
  */
 function formatArtifactDisplay(artifact: MergedArtifact): string {
   const statusIcon = artifact.installed ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED;
   const description = artifact.description ? ` - ${artifact.description}` : '';
   return `${statusIcon} ${artifact.name}${description}`;
+}
+
+/**
+ * Format artifact name without status indicator.
+ * Used for checkbox prompts where the built-in checkbox shows status.
+ *
+ * @param artifact - The artifact to format.
+ * @returns Formatted display string without checkbox icon.
+ */
+function formatArtifactName(artifact: MergedArtifact): string {
+  const description = artifact.description ? ` - ${artifact.description}` : '';
+  return `${artifact.name}${description}`;
 }
 
 /**
@@ -103,10 +127,11 @@ export function toSelectChoices(groups: GroupedArtifacts): Array<{ name: string;
 
 /**
  * Convert artifacts to checkbox prompt choices, optionally filtered.
+ * Does NOT include manual checkbox icons - relies on @inquirer/checkbox's built-in display.
  *
  * @param artifacts - Array of artifacts.
  * @param filter - Optional filter: 'installed' or 'available'.
- * @returns Array of checkbox choices.
+ * @returns Array of checkbox choices without status prefix.
  */
 export function toCheckboxChoices(
   artifacts: MergedArtifact[],
@@ -121,13 +146,14 @@ export function toCheckboxChoices(
   }
 
   return filtered.map((artifact) => ({
-    name: formatArtifactDisplay(artifact),
+    name: formatArtifactName(artifact),
     value: artifact,
   }));
 }
 
 /**
  * Convert grouped artifacts to checkbox choices, grouped by type.
+ * Does NOT include manual checkbox icons - relies on @inquirer/checkbox's built-in display.
  *
  * @param groups - Grouped artifacts object.
  * @param filter - Optional filter: 'installed' or 'available'.
@@ -156,7 +182,7 @@ export function toGroupedCheckboxChoices(
 
     for (const artifact of group) {
       choices.push({
-        name: formatArtifactDisplay(artifact),
+        name: formatArtifactName(artifact),
         value: artifact,
       });
     }
@@ -250,6 +276,7 @@ export async function promptArtifactCheckbox(
       message,
       choices,
       pageSize: 15,
+      theme: CHECKBOX_THEME,
     });
   } catch (error) {
     if (isExitPromptError(error)) {
@@ -284,6 +311,7 @@ export async function promptGroupedCheckbox(
       message,
       choices,
       pageSize: 15,
+      theme: CHECKBOX_THEME,
     });
   } catch (error) {
     if (isExitPromptError(error)) {

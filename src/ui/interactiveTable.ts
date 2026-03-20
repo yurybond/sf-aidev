@@ -8,7 +8,7 @@ import { Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
 
 /**
- * Checkbox characters for display.
+ * Checkbox characters for display in plain text output and select prompts.
  */
 const CHECKBOX_CHECKED = '\u2611'; // Checked box
 const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box
@@ -210,11 +210,12 @@ export class InteractiveTable {
   }
 
   /**
-   * Convert artifacts to checkbox prompt choices, optionally filtered by installation status.
+   * Convert artifacts to select prompt choices with status checkbox prefix.
+   * For use with @inquirer/select where we need to show installation status.
    *
    * @param artifacts - Array of artifacts.
    * @param filter - Optional filter: 'installed' or 'available'.
-   * @returns Array of checkbox choices.
+   * @returns Array of select choices with status indicator.
    */
   public static toCheckboxChoices(
     artifacts: MergedArtifact[],
@@ -233,6 +234,35 @@ export class InteractiveTable {
       const description = artifact.description ? ` - ${artifact.description}` : '';
       return {
         name: `${checkbox} ${artifact.name}${description}`,
+        value: artifact,
+      };
+    });
+  }
+
+  /**
+   * Convert artifacts to pure checkbox prompt choices (no manual status indicator).
+   * For use with @inquirer/checkbox which has built-in checked/unchecked display.
+   *
+   * @param artifacts - Array of artifacts.
+   * @param filter - Optional filter: 'installed' or 'available'.
+   * @returns Array of checkbox choices without status prefix.
+   */
+  public static toPureCheckboxChoices(
+    artifacts: MergedArtifact[],
+    filter?: 'installed' | 'available'
+  ): Array<{ name: string; value: MergedArtifact }> {
+    let filtered = artifacts;
+
+    if (filter === 'installed') {
+      filtered = artifacts.filter((a) => a.installed);
+    } else if (filter === 'available') {
+      filtered = artifacts.filter((a) => !a.installed);
+    }
+
+    return filtered.map((artifact) => {
+      const description = artifact.description ? ` - ${artifact.description}` : '';
+      return {
+        name: `${artifact.name}${description}`,
         value: artifact,
       };
     });
