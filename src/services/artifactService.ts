@@ -77,7 +77,7 @@ export class ArtifactService {
     sourceConfig: AiDevConfig,
     projectConfig: AiDevConfig,
     projectPath: string,
-    fetcher: typeof GitHubFetcher = GitHubFetcher
+    fetcher: typeof GitHubFetcher = GitHubFetcher,
   ) {
     this.sourceConfig = sourceConfig;
     this.projectConfig = projectConfig;
@@ -158,7 +158,7 @@ export class ArtifactService {
               description: artifact.description,
               source: source.repo,
               installed: installed.some(
-                (i) => i.name === artifact.name && i.type === artifact.type && i.source === source.repo
+                (i) => i.name === artifact.name && i.type === artifact.type && i.source === source.repo,
               ),
             }));
         } catch (error) {
@@ -166,7 +166,7 @@ export class ArtifactService {
           errors.push({ source: source.repo, error: errorMessage });
           return [];
         }
-      })
+      }),
     );
 
     const artifacts = perSource.flat();
@@ -180,7 +180,7 @@ export class ArtifactService {
    */
   public async install(
     artifactName: string,
-    options: { source?: string; type?: ArtifactType; tool?: string } = {}
+    options: { source?: string; type?: ArtifactType; tool?: string } = {},
   ): Promise<InstallResult> {
     const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
@@ -258,7 +258,7 @@ export class ArtifactService {
    */
   public async uninstall(
     artifactName: string,
-    options: { type?: ArtifactType; tool?: string } = {}
+    options: { type?: ArtifactType; tool?: string } = {},
   ): Promise<{ success: boolean; error?: string }> {
     const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
@@ -336,7 +336,7 @@ export class ArtifactService {
           exists = false;
         }
         return { artifact, exists };
-      })
+      }),
     );
   }
 
@@ -345,6 +345,37 @@ export class ArtifactService {
    */
   public clearCache(): void {
     this.manifestCache.clear();
+  }
+
+  /**
+   * Fetch the content of an artifact's primary file from its source repository.
+   *
+   * @param name - Artifact name.
+   * @param options - Optional filters for source and type.
+   * @returns The file content, or null if artifact not found or fetch failed.
+   */
+  public async fetchArtifactContent(
+    name: string,
+    options: { source?: string; type?: ArtifactType } = {},
+  ): Promise<string | null> {
+    const { artifact, source } = await this.findArtifact(name, options.source, options.type);
+
+    if (!artifact || !source) {
+      return null;
+    }
+
+    // Get the primary file path
+    const primaryFile = artifact.files[0];
+    if (!primaryFile) {
+      return null;
+    }
+
+    try {
+      const content = await this.fetcher.fetchFile(source.repo, primaryFile.source);
+      return content;
+    } catch {
+      return null;
+    }
   }
 
   private async getManifest(source: SourceConfig): Promise<Manifest> {
@@ -405,7 +436,7 @@ export class ArtifactService {
   private async findArtifact(
     name: string,
     sourceRepo?: string,
-    type?: ArtifactType
+    type?: ArtifactType,
   ): Promise<{ artifact?: Artifact; source?: SourceConfig }> {
     const sources = this.sourceConfig.getSources();
     const sourcesToSearch = sourceRepo ? sources.filter((s) => s.repo === sourceRepo) : sources;

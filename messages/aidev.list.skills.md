@@ -66,3 +66,11 @@ Failed to install "%s": %s
 # warning.RemoveFailed
 
 Failed to remove "%s": %s
+
+# info.FetchingDetails
+
+Fetching skill details from source...
+
+# warning.FailedToFetchDetails
+
+Could not fetch skill details: %s

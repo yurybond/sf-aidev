@@ -250,4 +250,59 @@ describe('aidev source refresh', () => {
       expect(warnStub.firstCall.args[0]).to.include('Failed to refresh');
     });
   });
+
+  describe('error message handling', () => {
+    it('handles Error with message in fetch failure', async () => {
+      fetchManifestStub.rejects(new Error('Custom error message'));
+
+      const result = await SourceRefresh.run(['owner/repo1'], oclifConfig);
+
+      expect(result.failedCount).to.equal(1);
+      expect(result.refreshed[0].success).to.be.false;
+      expect(result.refreshed[0].error).to.include('Custom error message');
+    });
+
+    it('handles Error in tree fetch during auto-discovery', async () => {
+      fetchManifestStub.rejects(new SfError('Manifest not found', 'ManifestNotFound'));
+      fetchRepoTreeStub.rejects(new Error('Tree fetch error'));
+
+      const result = await SourceRefresh.run(['owner/repo1'], oclifConfig);
+
+      expect(result.failedCount).to.equal(1);
+      expect(result.refreshed[0].success).to.be.false;
+      expect(result.refreshed[0].error).to.include('Tree fetch error');
+    });
+
+    it('handles empty error message gracefully', async () => {
+      fetchManifestStub.rejects(new Error(''));
+
+      const cmd = new SourceRefresh(['owner/repo1'], oclifConfig);
+      const warnStub = sandbox.stub(cmd, 'warn');
+
+      await cmd.run();
+
+      expect(warnStub.calledOnce).to.be.true;
+      // The warn should handle the empty error message with fallback
+      expect(warnStub.firstCall.args[0]).to.include('Failed to refresh');
+    });
+  });
+
+  describe('log output for auto-discovered sources', () => {
+    it('logs auto-discovered message when artifacts were discovered from file tree', async () => {
+      fetchManifestStub.rejects(new SfError('Manifest not found', 'ManifestNotFound'));
+      fetchRepoTreeStub.resolves(['.claude/skills/test-skill.md']);
+
+      const cmd = new SourceRefresh(['owner/repo1'], oclifConfig);
+      const logStub = sandbox.stub(cmd, 'log');
+
+      await cmd.run();
+
+      // Should log auto-discovered message
+      const logCalls = logStub.getCalls().map((c) => c.args[0] as string);
+      const hasAutoDiscoveredMessage = logCalls.some(
+        (msg) => msg && (msg.includes('auto-discovered') || msg.includes('discovered')),
+      );
+      expect(hasAutoDiscoveredMessage).to.be.true;
+    });
+  });
 });
