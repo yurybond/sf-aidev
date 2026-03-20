@@ -269,12 +269,12 @@ describe('ManifestBuilder', () => {
       });
     });
 
-    describe('auto-generated description', () => {
-      it('generates description with artifact type and path', () => {
+    describe('auto-discovered artifacts', () => {
+      it('does not generate description for auto-discovered artifacts', () => {
         const paths = ['agents/my-agent.md'];
         const manifest = ManifestBuilder.build(paths);
 
-        expect(manifest.artifacts[0].description).to.equal('Auto-discovered agent from agents/my-agent.md');
+        expect(manifest.artifacts[0].description).to.be.undefined;
       });
     });
   });
