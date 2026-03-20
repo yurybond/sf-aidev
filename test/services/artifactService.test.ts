@@ -87,7 +87,7 @@ describe('ArtifactService', () => {
           } catch {
             // Ignore
           }
-        })
+        }),
       );
       await fs.rm(tempDir, { recursive: true, force: true });
     } catch {
@@ -527,6 +527,66 @@ describe('ArtifactService', () => {
       // Should find artifact in test/repo after failing/repo fails
       expect(result.success).to.be.true;
       expect(fetchCount).to.be.greaterThan(0);
+    });
+  });
+
+  describe('fetchArtifactContent', () => {
+    it('returns content when artifact exists', async () => {
+      const content = await service.fetchArtifactContent('test-skill');
+      expect(content).to.include('# Content from test/repo/skills/test.md');
+    });
+
+    it('returns null when artifact not found', async () => {
+      const content = await service.fetchArtifactContent('non-existent');
+      expect(content).to.be.null;
+    });
+
+    it('returns null when artifact has no files', async () => {
+      // Create manifest with artifact without files
+      const noFilesManifest: Manifest = {
+        version: '1.0.0',
+        artifacts: [
+          {
+            name: 'no-files-artifact',
+            type: 'skill',
+            description: 'Artifact without files',
+            files: [],
+          },
+        ],
+      };
+
+      const noFilesFetcher = {
+        fetchManifest: async (): Promise<Manifest> => noFilesManifest,
+        fetchFile: async (): Promise<string> => 'content',
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const noFilesService = new ArtifactService(globalConfig, localConfig, tempDir, noFilesFetcher);
+      noFilesService.clearCache();
+
+      const content = await noFilesService.fetchArtifactContent('no-files-artifact');
+      expect(content).to.be.null;
+    });
+
+    it('returns null when fetch fails', async () => {
+      const failingFetcher = {
+        fetchManifest: async (): Promise<Manifest> => testManifest,
+        fetchFile: async (): Promise<string> => {
+          throw new Error('Fetch failed');
+        },
+      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
+
+      const failingService = new ArtifactService(globalConfig, localConfig, tempDir, failingFetcher);
+
+      const content = await failingService.fetchArtifactContent('test-skill');
+      expect(content).to.be.null;
+    });
+
+    it('filters by source and type', async () => {
+      const content = await service.fetchArtifactContent('test-skill', {
+        source: 'test/repo',
+        type: 'skill',
+      });
+      expect(content).to.include('# Content from test/repo/skills/test.md');
     });
   });
 });

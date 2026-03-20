@@ -11,6 +11,7 @@ import { ArtifactService } from '../../../services/artifactService.js';
 import { LocalFileScanner, type MergedArtifact } from '../../../services/localFileScanner.js';
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 import { InteractiveTable } from '../../../ui/interactiveTable.js';
+import { FrontmatterParser } from '../../../utils/frontmatterParser.js';
 import { isInteractive, promptArtifactAction, type ArtifactAction } from '../../../ui/interactivePrompts.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -130,11 +131,11 @@ export default class ListSkills extends SfCommand<ListSkillsResult> {
     action: ArtifactAction,
     artifact: MergedArtifact,
     service: ArtifactService,
-    skills: MergedArtifact[]
+    skills: MergedArtifact[],
   ): Promise<void> {
     switch (action) {
       case 'view':
-        this.displayArtifactDetails(artifact);
+        await this.displayArtifactDetails(artifact, service);
         break;
 
       case 'install':
@@ -175,15 +176,42 @@ export default class ListSkills extends SfCommand<ListSkillsResult> {
 
   /**
    * Display detailed information about an artifact.
+   * Fetches content from source repo to extract frontmatter description.
    */
-  protected displayArtifactDetails(artifact: MergedArtifact): void {
+  protected async displayArtifactDetails(artifact: MergedArtifact, service: ArtifactService): Promise<void> {
     this.log('');
     this.log(`Name: ${artifact.name}`);
     this.log(`Type: ${artifact.type}`);
     this.log(`Status: ${artifact.installed ? 'Installed' : 'Available'}`);
-    if (artifact.description) {
-      this.log(`Description: ${artifact.description}`);
+
+    // Try to fetch artifact content and extract frontmatter description
+    let frontmatterDescription: string | undefined;
+
+    if (artifact.source) {
+      this.spinner.start(messages.getMessage('info.FetchingDetails'));
+      try {
+        const content = await service.fetchArtifactContent(artifact.name, {
+          source: artifact.source,
+          type: 'skill',
+        });
+        this.spinner.stop();
+
+        if (content) {
+          frontmatterDescription = FrontmatterParser.extractDescription(content);
+        }
+      } catch (error) {
+        this.spinner.stop();
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        this.warn(messages.getMessage('warning.FailedToFetchDetails', [errorMsg]));
+      }
     }
+
+    // Show frontmatter description if available, otherwise fall back to manifest description
+    const displayDescription = frontmatterDescription ?? artifact.description;
+    if (displayDescription) {
+      this.log(`Description: ${displayDescription}`);
+    }
+
     if (artifact.source) {
       this.log(`Source: ${artifact.source}`);
     }
