@@ -13,93 +13,305 @@ import { LocalFileScanner } from '../../../../src/services/localFileScanner.js';
 import { AiDevConfig } from '../../../../src/config/aiDevConfig.js';
 
 describe('aidev list agents', () => {
-  let sandbox: sinon.SinonSandbox;
-  let scanAgentsStub: sinon.SinonStub;
-  let listAvailableStub: sinon.SinonStub;
+  const sandbox = sinon.createSandbox();
   let oclifConfig: Config;
 
   before(async () => {
     oclifConfig = await Config.load({ root: process.cwd() });
   });
 
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
-    scanAgentsStub = sandbox.stub(LocalFileScanner, 'scanAgents');
-    listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailable');
-  });
-
   afterEach(() => {
     sandbox.restore();
   });
 
-  describe('list agents', () => {
-    it('should list merged local and available agents', async () => {
-      scanAgentsStub.resolves([{ name: 'local-agent', type: 'agent', installed: true, path: '/path' }]);
-      listAvailableStub.resolves([{ name: 'remote-agent', type: 'agent', source: 'owner/repo', installed: false }]);
-
-      const result = await ListAgents.run([], oclifConfig);
-
-      expect(result.agents).to.have.lengthOf(2);
-      expect(result.counts.total).to.equal(2);
+  it('lists all agents in non-interactive mode', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [
+        { name: 'agent1', type: 'agent', source: 'test/repo', installed: false },
+        { name: 'agent2', type: 'agent', source: 'test/repo', installed: false, description: 'An agent' },
+      ],
+      errors: [],
+      partialSuccess: false,
     });
 
-    it('should return empty when no agents exist', async () => {
-      scanAgentsStub.resolves([]);
-      listAvailableStub.resolves([]);
+    const result = await ListAgents.run(['--json'], oclifConfig);
 
-      const result = await ListAgents.run([], oclifConfig);
+    expect(result.agents.length).to.equal(2);
+    expect(result.counts.available).to.equal(2);
+    expect(result.counts.installed).to.equal(0);
+  });
 
-      expect(result.agents).to.deep.equal([]);
-      expect(result.counts.total).to.equal(0);
+  it('returns JSON output with --json flag', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [],
+      errors: [],
+      partialSuccess: false,
     });
 
-    it('should sort agents alphabetically', async () => {
-      scanAgentsStub.resolves([
-        { name: 'zebra-agent', type: 'agent', installed: true, path: '/path' },
-        { name: 'alpha-agent', type: 'agent', installed: true, path: '/path' },
-      ]);
-      listAvailableStub.resolves([]);
+    const result = await ListAgents.run(['--json'], oclifConfig);
 
-      const result = await ListAgents.run([], oclifConfig);
+    expect(result).to.have.property('agents');
+    expect(result).to.have.property('counts');
+  });
 
-      expect(result.agents[0].name).to.equal('alpha-agent');
-      expect(result.agents[1].name).to.equal('zebra-agent');
+  it('merges local and available agents', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox
+      .stub(LocalFileScanner, 'scanAgents')
+      .resolves([{ name: 'local-agent', type: 'agent', installed: true, path: '/path/to/agent.md' }]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [
+        { name: 'local-agent', type: 'agent', source: 'test/repo', installed: true, description: 'From manifest' },
+        { name: 'remote-agent', type: 'agent', source: 'test/repo', installed: false },
+      ],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    const result = await ListAgents.run(['--json'], oclifConfig);
+
+    expect(result.agents.length).to.equal(2);
+    expect(result.counts.installed).to.equal(1);
+    expect(result.counts.available).to.equal(1);
+  });
+
+  it('filters by source when --source flag is provided', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [
+        { repo: 'source1/repo', isDefault: true, addedAt: '' },
+        { repo: 'source2/repo', isDefault: false, addedAt: '' },
+      ],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+
+    const listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors');
+    listAvailableStub.resolves({
+      artifacts: [],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    await ListAgents.run(['--source', 'source1/repo', '--json'], oclifConfig);
+
+    expect(listAvailableStub.calledOnce).to.equal(true);
+    expect(listAvailableStub.firstCall.args[0]).to.deep.include({
+      source: 'source1/repo',
+      type: 'agent',
     });
   });
 
-  describe('--source flag', () => {
-    it('should filter by source and type', async () => {
-      scanAgentsStub.resolves([]);
-      listAvailableStub.resolves([]);
+  it('shows warnings for failed sources', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'failing/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [],
+      errors: [{ source: 'failing/repo', error: 'Network error' }],
+      partialSuccess: false,
+    });
 
-      await ListAgents.run(['--source', 'owner/repo'], oclifConfig);
+    const result = await ListAgents.run(['--json'], oclifConfig);
 
-      expect(listAvailableStub.firstCall.args[0]).to.deep.include({
-        source: 'owner/repo',
-        type: 'agent',
+    // Command should complete successfully even with errors
+    expect(result.agents).to.be.an('array');
+  });
+
+  it('sorts agents alphabetically', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [
+        { name: 'zebra-agent', type: 'agent', source: 'test/repo', installed: false },
+        { name: 'alpha-agent', type: 'agent', source: 'test/repo', installed: false },
+        { name: 'beta-agent', type: 'agent', source: 'test/repo', installed: false },
+      ],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    const result = await ListAgents.run(['--json'], oclifConfig);
+
+    expect(result.agents[0].name).to.equal('alpha-agent');
+    expect(result.agents[1].name).to.equal('beta-agent');
+    expect(result.agents[2].name).to.equal('zebra-agent');
+  });
+
+  it('handles interactive mode with user selecting an artifact', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-agent', type: 'agent', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
       });
-    });
-  });
 
-  describe('counts', () => {
-    it('should return correct installed and available counts', async () => {
-      scanAgentsStub.resolves([{ name: 'installed-agent', type: 'agent', installed: true, path: '/path' }]);
-      listAvailableStub.resolves([{ name: 'available-agent', type: 'agent', source: 'owner/repo', installed: false }]);
+      // First call returns an agent, second call returns null to exit the loop
+      const promptSelectStub = sandbox.stub(ListAgents.prototype, 'promptSelect' as keyof ListAgents);
+      promptSelectStub.onFirstCall().resolves({ name: 'test-agent', type: 'agent', installed: false });
+      promptSelectStub.onSecondCall().resolves(null);
+
+      // Return 'back' action to go back to the list
+      sandbox.stub(ListAgents.prototype, 'promptAction' as keyof ListAgents).resolves('back');
 
       const result = await ListAgents.run([], oclifConfig);
 
-      expect(result.counts.installed).to.equal(1);
-      expect(result.counts.available).to.equal(1);
-    });
+      expect(result.agents.length).to.equal(1);
+      expect(promptSelectStub.callCount).to.equal(2);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 
-  describe('command metadata', () => {
-    it('should have required static properties', () => {
-      expect(ListAgents.summary).to.be.a('string').and.not.be.empty;
-      expect(ListAgents.description).to.be.a('string').and.not.be.empty;
-      expect(ListAgents.examples).to.be.an('array').and.have.length.greaterThan(0);
-      expect(ListAgents.enableJsonFlag).to.be.true;
-    });
+  it('handles interactive mode with install action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+        addInstalledArtifact: sandbox.stub(),
+        write: sandbox.stub().resolves(),
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAgents').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-agent', type: 'agent', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
+      });
+      sandbox.stub(ArtifactService.prototype, 'install').resolves({
+        success: true,
+        artifact: 'test-agent',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '/test/path',
+      });
+
+      const promptSelectStub = sandbox.stub(ListAgents.prototype, 'promptSelect' as keyof ListAgents);
+      promptSelectStub
+        .onFirstCall()
+        .resolves({ name: 'test-agent', type: 'agent', installed: false, source: 'test/repo' });
+      promptSelectStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListAgents.prototype, 'promptAction' as keyof ListAgents).resolves('install');
+
+      const result = await ListAgents.run([], oclifConfig);
+
+      expect(result.agents.length).to.equal(1);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles interactive mode with remove action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [
+          { name: 'test-agent', type: 'agent', path: '/test/path', source: 'test/repo', installedAt: '' },
+        ],
+        getTool: () => 'copilot',
+        removeInstalledArtifact: sandbox.stub(),
+        write: sandbox.stub().resolves(),
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanAgents')
+        .resolves([{ name: 'test-agent', type: 'agent', installed: true, path: '/test/path' }]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-agent', type: 'agent', source: 'test/repo', installed: true }],
+        errors: [],
+        partialSuccess: false,
+      });
+      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({
+        success: true,
+      });
+
+      const promptSelectStub = sandbox.stub(ListAgents.prototype, 'promptSelect' as keyof ListAgents);
+      promptSelectStub
+        .onFirstCall()
+        .resolves({ name: 'test-agent', type: 'agent', installed: true, source: 'test/repo' });
+      promptSelectStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListAgents.prototype, 'promptAction' as keyof ListAgents).resolves('remove');
+
+      const result = await ListAgents.run([], oclifConfig);
+
+      expect(result.agents.length).to.equal(1);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 });

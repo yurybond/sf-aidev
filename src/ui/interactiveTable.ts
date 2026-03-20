@@ -4,13 +4,14 @@
  * Licensed under the BSD 3-Clause license.
  */
 
+import { Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
 
 /**
  * Checkbox characters for display.
  */
-const CHECKBOX_CHECKED = '\u2611'; // ☑
-const CHECKBOX_UNCHECKED = '\u2610'; // ☐
+const CHECKBOX_CHECKED = '\u2611'; // Checked box
+const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box
 
 /**
  * Configuration for the interactive table display.
@@ -176,5 +177,64 @@ export class InteractiveTable {
     const available = allArtifacts.filter((a) => !a.installed).length;
 
     return { installed, available };
+  }
+
+  /**
+   * Convert grouped artifacts to select prompt choices with Separator headers.
+   *
+   * @param groups - Grouped artifacts object.
+   * @returns Array of choices for select prompt.
+   */
+  public static toSelectChoices(groups: GroupedArtifacts): Array<{ name: string; value: MergedArtifact } | Separator> {
+    const choices: Array<{ name: string; value: MergedArtifact } | Separator> = [];
+    const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'instructions'];
+
+    for (const groupKey of typeOrder) {
+      const group = groups[groupKey];
+      if (group.length === 0) continue;
+
+      const typeLabel = groupKey.charAt(0).toUpperCase() + groupKey.slice(1);
+      choices.push(new Separator(`--- ${typeLabel} ---`));
+
+      for (const artifact of group) {
+        const checkbox = artifact.installed ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED;
+        const description = artifact.description ? ` - ${artifact.description}` : '';
+        choices.push({
+          name: `${checkbox} ${artifact.name}${description}`,
+          value: artifact,
+        });
+      }
+    }
+
+    return choices;
+  }
+
+  /**
+   * Convert artifacts to checkbox prompt choices, optionally filtered by installation status.
+   *
+   * @param artifacts - Array of artifacts.
+   * @param filter - Optional filter: 'installed' or 'available'.
+   * @returns Array of checkbox choices.
+   */
+  public static toCheckboxChoices(
+    artifacts: MergedArtifact[],
+    filter?: 'installed' | 'available'
+  ): Array<{ name: string; value: MergedArtifact }> {
+    let filtered = artifacts;
+
+    if (filter === 'installed') {
+      filtered = artifacts.filter((a) => a.installed);
+    } else if (filter === 'available') {
+      filtered = artifacts.filter((a) => !a.installed);
+    }
+
+    return filtered.map((artifact) => {
+      const checkbox = artifact.installed ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED;
+      const description = artifact.description ? ` - ${artifact.description}` : '';
+      return {
+        name: `${checkbox} ${artifact.name}${description}`,
+        value: artifact,
+      };
+    });
   }
 }

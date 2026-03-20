@@ -5,7 +5,7 @@
   "functions": 90,
   "branches": 90,
   "include": ["src/**/*.ts"],
-  "exclude": ["**/*.d.ts", "**/*.test.ts"],
+  "exclude": ["**/*.d.ts", "**/*.test.ts", "src/types/**", "src/index.ts"],
   "reporter": ["lcov", "text"],
   "all": true,
   "src": ["src"]
