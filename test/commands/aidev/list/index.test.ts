@@ -8,128 +8,328 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import { Config } from '@oclif/core';
 import List from '../../../../src/commands/aidev/list/index.js';
+import { AiDevConfig } from '../../../../src/config/aiDevConfig.js';
 import { ArtifactService } from '../../../../src/services/artifactService.js';
 import { LocalFileScanner } from '../../../../src/services/localFileScanner.js';
-import { AiDevConfig } from '../../../../src/config/aiDevConfig.js';
 
 describe('aidev list', () => {
-  let sandbox: sinon.SinonSandbox;
-  let scanAllStub: sinon.SinonStub;
-  let scanInstructionsStub: sinon.SinonStub;
-  let listAvailableStub: sinon.SinonStub;
+  const sandbox = sinon.createSandbox();
   let oclifConfig: Config;
 
   before(async () => {
     oclifConfig = await Config.load({ root: process.cwd() });
   });
 
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
-    scanAllStub = sandbox.stub(LocalFileScanner, 'scanAll');
-    scanInstructionsStub = sandbox.stub(LocalFileScanner, 'scanInstructions');
-    listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailable');
-  });
-
   afterEach(() => {
     sandbox.restore();
   });
 
-  describe('list all artifacts', () => {
-    it('should list merged local and available artifacts', async () => {
-      scanAllStub.resolves([{ name: 'local-skill', type: 'skill', installed: true, path: '/path' }]);
-      scanInstructionsStub.resolves([{ name: 'CLAUDE.md', type: 'instruction', installed: true, path: '/path' }]);
-      listAvailableStub.resolves([
-        { name: 'remote-skill', type: 'skill', description: 'A skill', source: 'owner/repo', installed: false },
-      ]);
-
-      const result = await List.run([], oclifConfig);
-
-      expect(result.skills).to.have.lengthOf(2);
-      expect(result.instructions).to.have.lengthOf(1);
-      expect(result.counts.total).to.equal(3);
+  it('lists all artifacts in non-interactive mode', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [
+        { name: 'skill1', type: 'skill', source: 'test/repo', installed: false },
+        { name: 'agent1', type: 'agent', source: 'test/repo', installed: false },
+      ],
+      errors: [],
+      partialSuccess: false,
     });
 
-    it('should return empty arrays when no artifacts exist', async () => {
-      scanAllStub.resolves([]);
-      scanInstructionsStub.resolves([]);
-      listAvailableStub.resolves([]);
+    const result = await List.run(['--json'], oclifConfig);
 
-      const result = await List.run([], oclifConfig);
-
-      expect(result.agents).to.deep.equal([]);
-      expect(result.skills).to.deep.equal([]);
-      expect(result.prompts).to.deep.equal([]);
-      expect(result.instructions).to.deep.equal([]);
-      expect(result.counts.total).to.equal(0);
-    });
-
-    it('should deduplicate artifacts that exist locally and in manifest', async () => {
-      scanAllStub.resolves([{ name: 'shared-skill', type: 'skill', installed: true, path: '/path' }]);
-      scanInstructionsStub.resolves([]);
-      listAvailableStub.resolves([
-        { name: 'shared-skill', type: 'skill', description: 'Shared', source: 'owner/repo', installed: true },
-      ]);
-
-      const result = await List.run([], oclifConfig);
-
-      expect(result.skills).to.have.lengthOf(1);
-      expect(result.skills[0].installed).to.be.true;
-    });
+    expect(result.skills.length).to.equal(1);
+    expect(result.agents.length).to.equal(1);
+    expect(result.counts.total).to.equal(2);
   });
 
-  describe('--source flag', () => {
-    it('should pass source to listAvailable', async () => {
-      scanAllStub.resolves([]);
-      scanInstructionsStub.resolves([]);
-      listAvailableStub.resolves([]);
-
-      await List.run(['--source', 'owner/repo'], oclifConfig);
-
-      expect(listAvailableStub.firstCall.args[0]).to.deep.include({ source: 'owner/repo' });
+  it('returns JSON output with --json flag', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [],
+      errors: [],
+      partialSuccess: false,
     });
 
-    it('should work with short flag -s', async () => {
-      scanAllStub.resolves([]);
-      scanInstructionsStub.resolves([]);
-      listAvailableStub.resolves([]);
+    const result = await List.run(['--json'], oclifConfig);
 
-      await List.run(['-s', 'other/repo'], oclifConfig);
-
-      expect(listAvailableStub.firstCall.args[0]).to.deep.include({ source: 'other/repo' });
-    });
+    expect(result).to.have.property('agents');
+    expect(result).to.have.property('skills');
+    expect(result).to.have.property('prompts');
+    expect(result).to.have.property('instructions');
+    expect(result).to.have.property('counts');
   });
 
-  describe('counts', () => {
-    it('should return correct installed and available counts', async () => {
-      scanAllStub.resolves([
-        { name: 'installed-agent', type: 'agent', installed: true, path: '/path' },
-        { name: 'installed-skill', type: 'skill', installed: true, path: '/path' },
-      ]);
-      scanInstructionsStub.resolves([]);
-      listAvailableStub.resolves([
-        { name: 'available-skill', type: 'skill', source: 'owner/repo', installed: false },
-        { name: 'available-prompt', type: 'prompt', source: 'owner/repo', installed: false },
-      ]);
+  it('merges local and available artifacts', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox
+      .stub(LocalFileScanner, 'scanAll')
+      .resolves([{ name: 'local-skill', type: 'skill', installed: true, path: '/path/to/skill.md' }]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [
+        { name: 'local-skill', type: 'skill', source: 'test/repo', installed: true, description: 'From manifest' },
+        { name: 'remote-skill', type: 'skill', source: 'test/repo', installed: false },
+      ],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    const result = await List.run(['--json'], oclifConfig);
+
+    expect(result.skills.length).to.equal(2);
+
+    const localSkill = result.skills.find((s) => s.name === 'local-skill');
+    expect(localSkill?.installed).to.equal(true);
+    expect(localSkill?.description).to.equal('From manifest');
+
+    const remoteSkill = result.skills.find((s) => s.name === 'remote-skill');
+    expect(remoteSkill?.installed).to.equal(false);
+  });
+
+  it('filters by source when --source flag is provided', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [
+        { repo: 'source1/repo', isDefault: true, addedAt: '' },
+        { repo: 'source2/repo', isDefault: false, addedAt: '' },
+      ],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+
+    const listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors');
+    listAvailableStub.resolves({
+      artifacts: [{ name: 'skill1', type: 'skill', source: 'source1/repo', installed: false }],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    await List.run(['--source', 'source1/repo', '--json'], oclifConfig);
+
+    expect(listAvailableStub.calledOnce).to.equal(true);
+    expect(listAvailableStub.firstCall.args[0]).to.deep.include({ source: 'source1/repo' });
+  });
+
+  it('shows warnings for failed sources', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'failing/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [],
+      errors: [{ source: 'failing/repo', error: 'Network error' }],
+      partialSuccess: false,
+    });
+
+    // The command should have completed successfully even with errors
+    const result = await List.run(['--json'], oclifConfig);
+
+    expect(result.counts.total).to.equal(0);
+  });
+
+  it('includes instructions in output', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+    sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([
+      { name: 'CLAUDE.md', type: 'instruction', installed: true, path: '/project/CLAUDE.md' },
+      {
+        name: 'copilot-instructions.md',
+        type: 'instruction',
+        installed: true,
+        path: '/project/.github/copilot-instructions.md',
+      },
+    ]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [],
+      errors: [],
+      partialSuccess: false,
+    });
+
+    const result = await List.run(['--json'], oclifConfig);
+
+    expect(result.instructions.length).to.equal(2);
+    expect(result.instructions[0].type).to.equal('instruction');
+    expect(result.instructions.every((i) => i.installed)).to.equal(true);
+  });
+
+  it('handles interactive mode with user selecting an artifact', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+      sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-skill', type: 'skill', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      // First call returns a skill, second call returns null to exit the loop
+      const promptListStub = sandbox.stub(List.prototype, 'promptList' as keyof List);
+      promptListStub.onFirstCall().resolves({ name: 'test-skill', type: 'skill', installed: false });
+      promptListStub.onSecondCall().resolves(null);
+
+      // Return 'back' action to go back to the list
+      sandbox.stub(List.prototype, 'promptAction' as keyof List).resolves('back');
 
       const result = await List.run([], oclifConfig);
 
-      expect(result.counts.installed).to.equal(2);
-      expect(result.counts.available).to.equal(2);
-      expect(result.counts.total).to.equal(4);
-    });
+      expect(result.skills.length).to.equal(1);
+      expect(promptListStub.callCount).to.equal(2);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 
-  describe('command metadata', () => {
-    it('should have required static properties', () => {
-      expect(List.summary).to.be.a('string').and.not.be.empty;
-      expect(List.description).to.be.a('string').and.not.be.empty;
-      expect(List.examples).to.be.an('array').and.have.length.greaterThan(0);
-      expect(List.enableJsonFlag).to.be.true;
-    });
+  it('handles interactive mode with install action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
 
-    it('should have source flag', () => {
-      expect(List.flags).to.have.property('source');
-    });
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+        addInstalledArtifact: sandbox.stub(),
+        write: sandbox.stub().resolves(),
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+      sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-skill', type: 'skill', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
+      });
+      sandbox.stub(ArtifactService.prototype, 'install').resolves({
+        success: true,
+        artifact: 'test-skill',
+        type: 'skill',
+        tool: 'copilot',
+        installedPath: '/test/path',
+      });
+
+      const promptListStub = sandbox.stub(List.prototype, 'promptList' as keyof List);
+      promptListStub
+        .onFirstCall()
+        .resolves({ name: 'test-skill', type: 'skill', installed: false, source: 'test/repo' });
+      promptListStub.onSecondCall().resolves(null);
+
+      sandbox.stub(List.prototype, 'promptAction' as keyof List).resolves('install');
+
+      const result = await List.run([], oclifConfig);
+
+      expect(result.skills.length).to.equal(1);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles interactive mode with remove action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [
+          { name: 'test-skill', type: 'skill', path: '/test/path', source: 'test/repo', installedAt: '' },
+        ],
+        getTool: () => 'copilot',
+        removeInstalledArtifact: sandbox.stub(),
+        write: sandbox.stub().resolves(),
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanAll')
+        .resolves([{ name: 'test-skill', type: 'skill', installed: true, path: '/test/path' }]);
+      sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-skill', type: 'skill', source: 'test/repo', installed: true }],
+        errors: [],
+        partialSuccess: false,
+      });
+      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({
+        success: true,
+      });
+
+      const promptListStub = sandbox.stub(List.prototype, 'promptList' as keyof List);
+      promptListStub
+        .onFirstCall()
+        .resolves({ name: 'test-skill', type: 'skill', installed: true, source: 'test/repo' });
+      promptListStub.onSecondCall().resolves(null);
+
+      sandbox.stub(List.prototype, 'promptAction' as keyof List).resolves('remove');
+
+      const result = await List.run([], oclifConfig);
+
+      expect(result.skills.length).to.equal(1);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 });

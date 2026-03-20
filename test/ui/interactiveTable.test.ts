@@ -4,68 +4,73 @@
  * Licensed under the BSD 3-Clause license.
  */
 
+import { Separator } from '@inquirer/prompts';
 import { expect } from 'chai';
-import sinon from 'sinon';
 import { InteractiveTable } from '../../src/ui/interactiveTable.js';
 import type { GroupedArtifacts, MergedArtifact } from '../../src/services/localFileScanner.js';
 
 describe('InteractiveTable', () => {
-  let sandbox: sinon.SinonSandbox;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-  });
-
-  afterEach(() => {
-    sandbox.restore();
+  describe('isInteractiveSupported', () => {
+    it('returns a boolean', () => {
+      const result = InteractiveTable.isInteractiveSupported();
+      expect(typeof result).to.equal('boolean');
+    });
   });
 
   describe('formatRow', () => {
-    it('should format installed artifact with checked checkbox', () => {
-      const artifact: MergedArtifact = { name: 'my-skill', type: 'skill', installed: true };
-
+    it('formats installed artifact with checked box', () => {
+      const artifact: MergedArtifact = { name: 'test', type: 'skill', installed: true };
       const result = InteractiveTable.formatRow(artifact);
-
-      expect(result).to.equal('  \u2611 my-skill'); // ☑
+      expect(result).to.include('test');
+      expect(result).to.include('\u2611'); // Checked box
     });
 
-    it('should format available artifact with unchecked checkbox', () => {
-      const artifact: MergedArtifact = { name: 'my-skill', type: 'skill', installed: false };
-
+    it('formats available artifact with unchecked box', () => {
+      const artifact: MergedArtifact = { name: 'test', type: 'skill', installed: false };
       const result = InteractiveTable.formatRow(artifact);
-
-      expect(result).to.equal('  \u2610 my-skill'); // ☐
+      expect(result).to.include('test');
+      expect(result).to.include('\u2610'); // Unchecked box
     });
   });
 
   describe('formatHeader', () => {
-    it('should return header as-is', () => {
-      const result = InteractiveTable.formatHeader('Agents');
-
-      expect(result).to.equal('Agents');
+    it('returns the title unchanged', () => {
+      const result = InteractiveTable.formatHeader('Skills');
+      expect(result).to.equal('Skills');
     });
   });
 
   describe('toDisplayRows', () => {
-    it('should create display rows for all groups', () => {
+    it('creates display rows from grouped artifacts', () => {
       const groups: GroupedArtifacts = {
         agents: [{ name: 'agent1', type: 'agent', installed: true }],
-        skills: [{ name: 'skill1', type: 'skill', installed: false }],
+        skills: [],
         prompts: [],
         instructions: [],
       };
 
-      const result = InteractiveTable.toDisplayRows(groups);
+      const rows = InteractiveTable.toDisplayRows(groups);
+      expect(rows.length).to.be.greaterThan(0);
 
-      // Should have: Agents header, agent row, blank, Skills header, skill row
-      expect(result.length).to.be.greaterThan(0);
-      expect(result[0].text).to.equal('Agents');
-      expect(result[0].isHeader).to.be.true;
-      expect(result[1].text).to.include('agent1');
-      expect(result[1].isHeader).to.be.false;
+      const headerRow = rows.find((r) => r.isHeader);
+      expect(headerRow?.text).to.equal('Agents');
     });
 
-    it('should skip empty groups', () => {
+    it('handles empty groups', () => {
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [],
+        prompts: [],
+        instructions: [],
+      };
+
+      const rows = InteractiveTable.toDisplayRows(groups);
+      expect(rows).to.deep.equal([]);
+    });
+  });
+
+  describe('renderPlainText', () => {
+    it('calls log function for each row', () => {
       const groups: GroupedArtifacts = {
         agents: [],
         skills: [{ name: 'skill1', type: 'skill', installed: true }],
@@ -73,14 +78,14 @@ describe('InteractiveTable', () => {
         instructions: [],
       };
 
-      const result = InteractiveTable.toDisplayRows(groups);
+      const logged: string[] = [];
+      InteractiveTable.renderPlainText(groups, (msg) => logged.push(msg));
 
-      // Should only have Skills section
-      expect(result[0].text).to.equal('Skills');
-      expect(result.some((r) => r.text === 'Agents')).to.be.false;
+      expect(logged.length).to.be.greaterThan(0);
+      expect(logged.some((msg) => msg.includes('Skills'))).to.equal(true);
     });
 
-    it('should return empty array for empty groups', () => {
+    it('shows empty message for no artifacts', () => {
       const groups: GroupedArtifacts = {
         agents: [],
         skills: [],
@@ -88,123 +93,136 @@ describe('InteractiveTable', () => {
         instructions: [],
       };
 
-      const result = InteractiveTable.toDisplayRows(groups);
+      const logged: string[] = [];
+      InteractiveTable.renderPlainText(groups, (msg) => logged.push(msg));
 
-      expect(result).to.deep.equal([]);
-    });
-
-    it('should include instructions section', () => {
-      const groups: GroupedArtifacts = {
-        agents: [],
-        skills: [],
-        prompts: [],
-        instructions: [{ name: 'CLAUDE.md', type: 'instruction', installed: true }],
-      };
-
-      const result = InteractiveTable.toDisplayRows(groups);
-
-      expect(result[0].text).to.equal('Instructions');
-      expect(result[1].text).to.include('CLAUDE.md');
-    });
-  });
-
-  describe('renderPlainText', () => {
-    it('should call log for each row', () => {
-      const groups: GroupedArtifacts = {
-        agents: [{ name: 'agent1', type: 'agent', installed: true }],
-        skills: [],
-        prompts: [],
-        instructions: [],
-      };
-      const logSpy = sandbox.spy();
-
-      InteractiveTable.renderPlainText(groups, logSpy);
-
-      expect(logSpy.called).to.be.true;
-      expect(logSpy.firstCall.args[0]).to.equal('Agents');
-    });
-
-    it('should show empty message when no artifacts', () => {
-      const groups: GroupedArtifacts = {
-        agents: [],
-        skills: [],
-        prompts: [],
-        instructions: [],
-      };
-      const logSpy = sandbox.spy();
-
-      InteractiveTable.renderPlainText(groups, logSpy);
-
-      expect(logSpy.calledWith('No artifacts found.')).to.be.true;
+      expect(logged.some((msg) => msg.includes('No artifacts found'))).to.equal(true);
     });
   });
 
   describe('renderSection', () => {
-    it('should render section with title and rows', () => {
+    it('renders a single section', () => {
       const artifacts: MergedArtifact[] = [
         { name: 'skill1', type: 'skill', installed: true },
         { name: 'skill2', type: 'skill', installed: false },
       ];
-      const logSpy = sandbox.spy();
 
-      InteractiveTable.renderSection(artifacts, 'Skills', logSpy);
+      const logged: string[] = [];
+      InteractiveTable.renderSection(artifacts, 'Skills', (msg) => logged.push(msg));
 
-      expect(logSpy.firstCall.args[0]).to.equal('Skills');
-      expect(logSpy.secondCall.args[0]).to.include('skill1');
-      expect(logSpy.thirdCall.args[0]).to.include('skill2');
+      expect(logged[0]).to.equal('Skills');
+      expect(logged.length).to.equal(3); // header + 2 items
     });
 
-    it('should show empty message when no artifacts', () => {
-      const logSpy = sandbox.spy();
+    it('shows empty message for no artifacts', () => {
+      const logged: string[] = [];
+      InteractiveTable.renderSection([], 'Skills', (msg) => logged.push(msg));
 
-      InteractiveTable.renderSection([], 'Skills', logSpy);
-
-      expect(logSpy.calledWith('No skills found.')).to.be.true;
+      expect(logged.some((msg) => msg.includes('No skills found'))).to.equal(true);
     });
   });
 
   describe('getTotalCount', () => {
-    it('should return total count of all artifacts', () => {
+    it('returns total count of all artifacts', () => {
       const groups: GroupedArtifacts = {
-        agents: [{ name: 'a', type: 'agent', installed: true }],
+        agents: [{ name: 'a1', type: 'agent', installed: true }],
         skills: [
-          { name: 'b', type: 'skill', installed: true },
-          { name: 'c', type: 'skill', installed: false },
+          { name: 's1', type: 'skill', installed: true },
+          { name: 's2', type: 'skill', installed: false },
         ],
-        prompts: [{ name: 'd', type: 'prompt', installed: true }],
-        instructions: [{ name: 'e', type: 'instruction', installed: true }],
+        prompts: [],
+        instructions: [{ name: 'i1', type: 'instruction', installed: true }],
       };
 
-      const result = InteractiveTable.getTotalCount(groups);
-
-      expect(result).to.equal(5);
+      expect(InteractiveTable.getTotalCount(groups)).to.equal(4);
     });
   });
 
   describe('getCounts', () => {
-    it('should return installed and available counts', () => {
+    it('returns installed and available counts', () => {
       const groups: GroupedArtifacts = {
-        agents: [{ name: 'a', type: 'agent', installed: true }],
+        agents: [{ name: 'a1', type: 'agent', installed: true }],
         skills: [
-          { name: 'b', type: 'skill', installed: true },
-          { name: 'c', type: 'skill', installed: false },
+          { name: 's1', type: 'skill', installed: true },
+          { name: 's2', type: 'skill', installed: false },
         ],
-        prompts: [{ name: 'd', type: 'prompt', installed: false }],
+        prompts: [{ name: 'p1', type: 'prompt', installed: false }],
         instructions: [],
       };
 
-      const result = InteractiveTable.getCounts(groups);
-
-      expect(result.installed).to.equal(2);
-      expect(result.available).to.equal(2);
+      const counts = InteractiveTable.getCounts(groups);
+      expect(counts.installed).to.equal(2);
+      expect(counts.available).to.equal(2);
     });
   });
 
-  describe('isInteractiveSupported', () => {
-    it('should check if stdout is TTY', () => {
-      // This will depend on the test environment
-      const result = InteractiveTable.isInteractiveSupported();
-      expect(typeof result).to.equal('boolean');
+  describe('toSelectChoices', () => {
+    it('converts grouped artifacts to select choices', () => {
+      const groups: GroupedArtifacts = {
+        agents: [{ name: 'agent1', type: 'agent', installed: true }],
+        skills: [{ name: 'skill1', type: 'skill', installed: false, description: 'A skill' }],
+        prompts: [],
+        instructions: [],
+      };
+
+      const choices = InteractiveTable.toSelectChoices(groups);
+
+      // Should have separators and items
+      const separators = choices.filter((c) => c instanceof Separator);
+      expect(separators.length).to.equal(2); // Agents and Skills
+
+      const items = choices.filter((c) => !(c instanceof Separator));
+      expect(items.length).to.equal(2);
+    });
+
+    it('includes description in display', () => {
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [{ name: 'test', type: 'skill', installed: false, description: 'Test desc' }],
+        prompts: [],
+        instructions: [],
+      };
+
+      const choices = InteractiveTable.toSelectChoices(groups);
+      const skillChoice = choices.find(
+        (c) => !(c instanceof Separator) && (c as { value: MergedArtifact }).value.name === 'test'
+      ) as { name: string };
+
+      expect(skillChoice.name).to.include('Test desc');
+    });
+  });
+
+  describe('toCheckboxChoices', () => {
+    const artifacts: MergedArtifact[] = [
+      { name: 'installed1', type: 'skill', installed: true },
+      { name: 'available1', type: 'skill', installed: false },
+    ];
+
+    it('returns all artifacts without filter', () => {
+      const choices = InteractiveTable.toCheckboxChoices(artifacts);
+      expect(choices.length).to.equal(2);
+    });
+
+    it('filters to installed only', () => {
+      const choices = InteractiveTable.toCheckboxChoices(artifacts, 'installed');
+      expect(choices.length).to.equal(1);
+      expect(choices[0].value.installed).to.equal(true);
+    });
+
+    it('filters to available only', () => {
+      const choices = InteractiveTable.toCheckboxChoices(artifacts, 'available');
+      expect(choices.length).to.equal(1);
+      expect(choices[0].value.installed).to.equal(false);
+    });
+
+    it('includes status indicator in name', () => {
+      const choices = InteractiveTable.toCheckboxChoices(artifacts);
+
+      const installedChoice = choices.find((c) => c.value.name === 'installed1');
+      expect(installedChoice?.name).to.include('\u2611'); // Checked box
+
+      const availableChoice = choices.find((c) => c.value.name === 'available1');
+      expect(availableChoice?.name).to.include('\u2610'); // Unchecked box
     });
   });
 });

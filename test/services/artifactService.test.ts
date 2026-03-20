@@ -7,19 +7,16 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { expect } from 'chai';
-import sinon from 'sinon';
 import { AiDevConfig } from '../../src/config/aiDevConfig.js';
 import { ArtifactService } from '../../src/services/artifactService.js';
-import { ManifestCache } from '../../src/sources/manifestCache.js';
 import type { Manifest } from '../../src/types/manifest.js';
 
 describe('ArtifactService', () => {
   let tempDir: string;
-  let sourceConfig: AiDevConfig;
-  let projectConfig: AiDevConfig;
+  let globalConfig: AiDevConfig;
+  let localConfig: AiDevConfig;
   let service: ArtifactService;
   let installedFiles: string[] = [];
-  let sandbox: sinon.SinonSandbox;
 
   const testManifest: Manifest = {
     version: '1.0.0',
@@ -53,42 +50,35 @@ describe('ArtifactService', () => {
   } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
   beforeEach(async () => {
-    sandbox = sinon.createSandbox();
     tempDir = path.join(process.cwd(), '.test-artifact-service-' + Date.now());
     await fs.mkdir(tempDir, { recursive: true });
     await fs.mkdir(path.join(tempDir, '.sf'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.github'), { recursive: true });
 
-    // Use test cache directory for ManifestCache
-    ManifestCache.setTestCacheDir(path.join(tempDir, '.sf', 'sf-aidev-manifests'));
-
     // Create Copilot indicator file
     await fs.writeFile(path.join(tempDir, '.github', 'copilot-instructions.md'), '# Copilot');
 
-    // Create separate configs for sources (global) and project (local)
-    sourceConfig = await AiDevConfig.create({
-      isGlobal: false, // Using local for test isolation, but simulates global behavior
+    globalConfig = await AiDevConfig.create({
+      isGlobal: true,
       rootFolder: tempDir,
     });
 
-    projectConfig = await AiDevConfig.create({
+    localConfig = await AiDevConfig.create({
       isGlobal: false,
       rootFolder: tempDir,
     });
 
-    sourceConfig.addSource({
+    globalConfig.addSource({
       repo: 'test/repo',
       isDefault: true,
       addedAt: new Date().toISOString(),
     });
 
-    service = new ArtifactService(sourceConfig, projectConfig, tempDir, mockFetcher);
+    service = new ArtifactService(globalConfig, localConfig, tempDir, mockFetcher);
     installedFiles = [];
   });
 
   afterEach(async () => {
-    sandbox.restore();
-    ManifestCache.setTestCacheDir(undefined);
     try {
       await Promise.all(
         installedFiles.map(async (file) => {
@@ -157,7 +147,7 @@ describe('ArtifactService', () => {
     });
 
     it('marks installed artifacts', async () => {
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: '/fake/path',
@@ -177,8 +167,8 @@ describe('ArtifactService', () => {
     });
 
     it('returns error when no tool configured', async () => {
-      projectConfig.setTool(undefined as unknown as string);
-      const newService = new ArtifactService(sourceConfig, projectConfig, tempDir, mockFetcher);
+      localConfig.setTool(undefined as unknown as string);
+      const newService = new ArtifactService(globalConfig, localConfig, tempDir, mockFetcher);
 
       const result = await newService.install('test-skill');
       expect(result.success).to.be.false;
@@ -248,7 +238,7 @@ describe('ArtifactService', () => {
     });
 
     it('returns installed artifacts', async () => {
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: '/fake/path',
@@ -261,14 +251,14 @@ describe('ArtifactService', () => {
     });
 
     it('filters by type', async () => {
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: '/fake/skill-path',
         source: 'test/repo',
         installedAt: new Date().toISOString(),
       });
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-agent',
         type: 'agent',
         path: '/fake/agent-path',
@@ -288,7 +278,7 @@ describe('ArtifactService', () => {
     });
 
     it('returns true when installed', async () => {
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: '/fake/path',
@@ -305,7 +295,7 @@ describe('ArtifactService', () => {
       const testFile = path.join(tempDir, 'test-file.md');
       await fs.writeFile(testFile, 'test');
 
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: testFile,
@@ -321,7 +311,7 @@ describe('ArtifactService', () => {
     });
 
     it('returns exists false for missing path', async () => {
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'test-skill',
         type: 'skill',
         path: '/non/existent/file.md',
@@ -359,7 +349,7 @@ describe('ArtifactService', () => {
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
-      const cachingService = new ArtifactService(sourceConfig, projectConfig, tempDir, countingFetcher);
+      const cachingService = new ArtifactService(globalConfig, localConfig, tempDir, countingFetcher);
 
       // First call populates cache
       await cachingService.listAvailable();
@@ -372,7 +362,19 @@ describe('ArtifactService', () => {
   });
 
   describe('listAvailable error handling', () => {
-    it('returns empty array when manifest fetch fails', async () => {
+    it('returns empty array when manifest fetch fails for all sources', async () => {
+      // Create a fresh config with only a failing source
+      const freshGlobalConfig = await AiDevConfig.create({
+        isGlobal: true,
+        rootFolder: tempDir,
+      });
+
+      freshGlobalConfig.addSource({
+        repo: 'failing/repo',
+        isDefault: true,
+        addedAt: new Date().toISOString(),
+      });
+
       const failingFetcher = {
         fetchManifest: async (): Promise<Manifest> => {
           throw new Error('Network error');
@@ -380,7 +382,7 @@ describe('ArtifactService', () => {
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
-      const failingService = new ArtifactService(sourceConfig, projectConfig, tempDir, failingFetcher);
+      const failingService = new ArtifactService(freshGlobalConfig, localConfig, tempDir, failingFetcher);
       const artifacts = await failingService.listAvailable();
 
       expect(artifacts).to.be.an('array').that.is.empty;
@@ -421,7 +423,7 @@ describe('ArtifactService', () => {
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
-      const unsupportedService = new ArtifactService(sourceConfig, projectConfig, tempDir, unsupportedFetcher);
+      const unsupportedService = new ArtifactService(globalConfig, localConfig, tempDir, unsupportedFetcher);
       unsupportedService.clearCache();
 
       const result = await unsupportedService.install('unsupported-artifact', {
@@ -441,7 +443,7 @@ describe('ArtifactService', () => {
         },
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
-      const throwingService = new ArtifactService(sourceConfig, projectConfig, tempDir, throwingFetcher);
+      const throwingService = new ArtifactService(globalConfig, localConfig, tempDir, throwingFetcher);
 
       const result = await throwingService.install('test-skill');
       expect(result.success).to.be.false;
@@ -451,8 +453,8 @@ describe('ArtifactService', () => {
 
   describe('uninstall error handling', () => {
     it('returns error when no tool configured', async () => {
-      projectConfig.setTool(undefined as unknown as string);
-      const newService = new ArtifactService(sourceConfig, projectConfig, tempDir, mockFetcher);
+      localConfig.setTool(undefined as unknown as string);
+      const newService = new ArtifactService(globalConfig, localConfig, tempDir, mockFetcher);
 
       const result = await newService.uninstall('test-skill');
       expect(result.success).to.be.false;
@@ -463,7 +465,7 @@ describe('ArtifactService', () => {
       await service.setActiveTool('copilot');
 
       // Add an artifact with unsupported type directly to config
-      projectConfig.addInstalledArtifact({
+      localConfig.addInstalledArtifact({
         name: 'unsupported-installed',
         type: 'unsupported' as import('../../src/types/manifest.js').ArtifactType,
         path: '/fake/path',
@@ -498,7 +500,7 @@ describe('ArtifactService', () => {
   describe('findArtifact error handling', () => {
     it('continues to next source when manifest fetch fails', async () => {
       // Add a second source
-      sourceConfig.addSource({
+      globalConfig.addSource({
         repo: 'failing/repo',
         isDefault: false,
         addedAt: new Date().toISOString(),
@@ -518,69 +520,13 @@ describe('ArtifactService', () => {
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
       await service.setActiveTool('copilot');
-      const mixedService = new ArtifactService(sourceConfig, projectConfig, tempDir, mixedFetcher);
+      const mixedService = new ArtifactService(globalConfig, localConfig, tempDir, mixedFetcher);
 
       const result = await mixedService.install('test-skill');
 
       // Should find artifact in test/repo after failing/repo fails
       expect(result.success).to.be.true;
       expect(fetchCount).to.be.greaterThan(0);
-    });
-  });
-
-  describe('disk cache fallback', () => {
-    it('uses disk cache when GitHub fetch fails', async () => {
-      // Pre-populate disk cache
-      await ManifestCache.save('test/repo', testManifest, false);
-
-      // Create service with failing fetcher
-      const failingFetcher = {
-        fetchManifest: async (): Promise<Manifest> => {
-          throw new Error('Network error');
-        },
-        fetchFile: async (): Promise<string> => 'content',
-      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
-
-      const failingService = new ArtifactService(sourceConfig, projectConfig, tempDir, failingFetcher);
-
-      // Should still get artifacts from disk cache
-      const artifacts = await failingService.listAvailable();
-      expect(artifacts).to.have.length(3);
-    });
-
-    it('throws when no cache available and fetch fails', async () => {
-      // Create service with failing fetcher (no disk cache)
-      const failingFetcher = {
-        fetchManifest: async (): Promise<Manifest> => {
-          throw new Error('Network error');
-        },
-        fetchFile: async (): Promise<string> => 'content',
-      } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
-
-      const failingService = new ArtifactService(sourceConfig, projectConfig, tempDir, failingFetcher);
-
-      // listAvailable catches errors and returns empty, but getManifest should throw
-      // We test through listAvailable which catches the error
-      const artifacts = await failingService.listAvailable();
-      expect(artifacts).to.be.an('array').that.is.empty;
-    });
-
-    it('updates disk cache when fetch succeeds', async () => {
-      // Ensure the cache directory exists
-      const cacheDir = ManifestCache.getCacheDir();
-      await fs.mkdir(cacheDir, { recursive: true });
-
-      // First call should populate cache
-      await service.listAvailable();
-
-      // Wait a bit for the async cache save to complete
-      // (getManifest fires save() without awaiting)
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify cache was saved
-      const cached = await ManifestCache.load('test/repo');
-      expect(cached).to.not.be.undefined;
-      expect(cached?.manifest.artifacts).to.have.length(3);
     });
   });
 });

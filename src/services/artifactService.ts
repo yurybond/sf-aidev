@@ -49,6 +49,15 @@ export interface ListOptions {
 }
 
 /**
+ * Result of listing available artifacts, including any errors encountered
+ */
+export interface ListAvailableResult {
+  artifacts: AvailableArtifact[];
+  errors: Array<{ source: string; error: string }>;
+  partialSuccess: boolean;
+}
+
+/**
  * Service layer for artifact operations.
  * Coordinates detection, fetching, and installation of AI tool artifacts.
  *
@@ -113,15 +122,26 @@ export class ArtifactService {
   }
 
   /**
-   * List available artifacts from configured sources
+   * List available artifacts from configured sources.
+   * Returns artifacts along with any errors encountered during fetching.
    */
   public async listAvailable(options: ListOptions = {}): Promise<AvailableArtifact[]> {
+    const result = await this.listAvailableWithErrors(options);
+    return result.artifacts;
+  }
+
+  /**
+   * List available artifacts from configured sources with detailed error information.
+   * Use this method when you need to display warnings about failed sources.
+   */
+  public async listAvailableWithErrors(options: ListOptions = {}): Promise<ListAvailableResult> {
     const sources = this.sourceConfig.getSources();
     const installed = this.projectConfig.getInstalledArtifacts();
     const activeTool = options.tool ?? this.projectConfig.getTool();
 
     const sourcesToQuery = options.source ? sources.filter((s) => s.repo === options.source) : sources;
 
+    const errors: Array<{ source: string; error: string }> = [];
     const perSource = await Promise.all(
       sourcesToQuery.map(async (source) => {
         try {
@@ -141,13 +161,18 @@ export class ArtifactService {
                 (i) => i.name === artifact.name && i.type === artifact.type && i.source === source.repo
               ),
             }));
-        } catch {
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push({ source: source.repo, error: errorMessage });
           return [];
         }
       })
     );
 
-    return perSource.flat();
+    const artifacts = perSource.flat();
+    const partialSuccess = errors.length > 0 && errors.length < sourcesToQuery.length;
+
+    return { artifacts, errors, partialSuccess };
   }
 
   /**
