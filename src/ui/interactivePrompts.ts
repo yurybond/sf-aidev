@@ -15,6 +15,13 @@ const CHECKBOX_CHECKED = '\u2611'; // Checked box (filled square)
 const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
 
 /**
+ * Keyboard help text for different prompt types.
+ */
+const SELECT_HELP = '(↑↓ navigate, Enter select, Esc exit)';
+const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, Enter confirm, Esc cancel)';
+const ACTION_HELP = '(↑↓ navigate, Enter select, Esc back)';
+
+/**
  * Custom theme for @inquirer/checkbox prompt with square checkboxes.
  */
 export const CHECKBOX_THEME = {
@@ -135,7 +142,7 @@ export function toSelectChoices(groups: GroupedArtifacts): Array<{ name: string;
  */
 export function toCheckboxChoices(
   artifacts: MergedArtifact[],
-  filter?: 'installed' | 'available'
+  filter?: 'installed' | 'available',
 ): Array<{ name: string; value: MergedArtifact }> {
   let filtered = artifacts;
 
@@ -161,7 +168,7 @@ export function toCheckboxChoices(
  */
 export function toGroupedCheckboxChoices(
   groups: GroupedArtifacts,
-  filter?: 'installed' | 'available'
+  filter?: 'installed' | 'available',
 ): Array<{ name: string; value: MergedArtifact } | Separator> {
   const choices: Array<{ name: string; value: MergedArtifact } | Separator> = [];
   const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts'];
@@ -208,7 +215,7 @@ export async function promptArtifactList(groups: GroupedArtifacts, message: stri
 
   try {
     return await select<MergedArtifact>({
-      message,
+      message: `${message} ${SELECT_HELP}`,
       choices,
       pageSize: 15,
     });
@@ -240,7 +247,7 @@ export async function promptArtifactAction(artifact: MergedArtifact): Promise<Ar
 
   try {
     return await select<ArtifactAction>({
-      message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}):`,
+      message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}): ${ACTION_HELP}`,
       choices,
     });
   } catch (error) {
@@ -263,7 +270,7 @@ export async function promptArtifactAction(artifact: MergedArtifact): Promise<Ar
 export async function promptArtifactCheckbox(
   artifacts: MergedArtifact[],
   message: string,
-  filter?: 'installed' | 'available'
+  filter?: 'installed' | 'available',
 ): Promise<MergedArtifact[]> {
   const choices = toCheckboxChoices(artifacts, filter);
 
@@ -273,7 +280,7 @@ export async function promptArtifactCheckbox(
 
   try {
     return await checkbox<MergedArtifact>({
-      message,
+      message: `${message} ${CHECKBOX_HELP}`,
       choices,
       pageSize: 15,
       theme: CHECKBOX_THEME,
@@ -298,7 +305,7 @@ export async function promptArtifactCheckbox(
 export async function promptGroupedCheckbox(
   groups: GroupedArtifacts,
   message: string,
-  filter?: 'installed' | 'available'
+  filter?: 'installed' | 'available',
 ): Promise<MergedArtifact[]> {
   const choices = toGroupedCheckboxChoices(groups, filter);
 
@@ -308,7 +315,7 @@ export async function promptGroupedCheckbox(
 
   try {
     return await checkbox<MergedArtifact>({
-      message,
+      message: `${message} ${CHECKBOX_HELP}`,
       choices,
       pageSize: 15,
       theme: CHECKBOX_THEME,
