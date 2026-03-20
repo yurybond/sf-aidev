@@ -328,7 +328,10 @@ describe('SourceService', () => {
         fetchManifest: async (): Promise<Manifest> => {
           throw new SfError('Manifest not found', 'ManifestNotFound');
         },
-        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test-skill.md', '.github/agents/test-agent.md'],
+        fetchRepoTree: async (): Promise<string[]> => [
+          '.claude/skills/test-skill/index.md',
+          '.github/agents/test-agent.md',
+        ],
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
@@ -380,7 +383,7 @@ describe('SourceService', () => {
         fetchManifest: async (): Promise<Manifest> => {
           throw new SfError('Network error', 'NetworkError');
         },
-        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test.md'],
+        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test/index.md'],
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 
@@ -419,7 +422,7 @@ describe('SourceService', () => {
         fetchManifest: async (): Promise<Manifest> => {
           throw new SfError('Manifest not found', 'ManifestNotFound');
         },
-        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test-skill.md'],
+        fetchRepoTree: async (): Promise<string[]> => ['.claude/skills/test-skill/index.md'],
         fetchFile: async (): Promise<string> => 'content',
       } as unknown as typeof import('../../src/sources/gitHubFetcher.js').GitHubFetcher;
 

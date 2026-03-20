@@ -28,8 +28,8 @@ export interface Artifact {
   name: string;
   /** Type of artifact */
   type: ArtifactType;
-  /** Human-readable description */
-  description: string;
+  /** Human-readable description (optional for auto-discovered artifacts) */
+  description?: string;
   /** Files that make up this artifact */
   files: ArtifactFile[];
   /** AI tools this artifact supports (empty means all tools) */

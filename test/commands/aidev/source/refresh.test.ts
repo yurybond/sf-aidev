@@ -103,7 +103,7 @@ describe('aidev source refresh', () => {
   describe('auto-discovery fallback', () => {
     it('uses auto-discovery when manifest not found', async () => {
       fetchManifestStub.rejects(new SfError('Manifest not found', 'ManifestNotFound'));
-      fetchRepoTreeStub.resolves(['.claude/skills/test-skill.md', '.github/agents/test-agent.md']);
+      fetchRepoTreeStub.resolves(['.claude/skills/test-skill/index.md', '.github/agents/test-agent.md']);
 
       const result = await SourceRefresh.run(['owner/repo1'], oclifConfig);
 
@@ -192,7 +192,7 @@ describe('aidev source refresh', () => {
 
     it('saves auto-discovered manifest with flag', async () => {
       fetchManifestStub.rejects(new SfError('Manifest not found', 'ManifestNotFound'));
-      fetchRepoTreeStub.resolves(['.claude/skills/test.md']);
+      fetchRepoTreeStub.resolves(['.claude/skills/test/index.md']);
 
       await SourceRefresh.run(['owner/repo1'], oclifConfig);
 
