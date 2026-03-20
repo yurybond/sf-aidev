@@ -91,7 +91,6 @@ export class ManifestBuilder {
     const artifact: Artifact = {
       name,
       type,
-      description: `Auto-discovered ${type} from ${path}`,
       files: [{ source: path }],
     };
 
