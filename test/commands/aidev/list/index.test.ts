@@ -332,4 +332,113 @@ describe('aidev list', () => {
       });
     }
   });
+
+  it('handles interactive mode with view action and fetches frontmatter description', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+      sandbox.stub(LocalFileScanner, 'scanInstructions').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [
+          { name: 'test-skill', type: 'skill', source: 'test/repo', installed: false, description: 'Manifest desc' },
+        ],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      // Mock fetchArtifactContent to return content with frontmatter
+      sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent').resolves(`---
+description: 'Frontmatter description from file'
+---
+
+# Content`);
+
+      const promptListStub = sandbox.stub(List.prototype, 'promptList' as keyof List);
+      promptListStub
+        .onFirstCall()
+        .resolves({ name: 'test-skill', type: 'skill', installed: false, source: 'test/repo' });
+      promptListStub.onSecondCall().resolves(null);
+
+      const promptActionStub = sandbox.stub(List.prototype, 'promptAction' as keyof List);
+      promptActionStub.onFirstCall().resolves('view');
+      promptActionStub.onSecondCall().resolves('back');
+
+      const result = await List.run([], oclifConfig);
+
+      expect(result.skills.length).to.equal(1);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles view action for instruction type without fetching', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAll').resolves([]);
+      sandbox
+        .stub(LocalFileScanner, 'scanInstructions')
+        .resolves([{ name: 'CLAUDE.md', type: 'instruction', installed: true, path: '/project/CLAUDE.md' }]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      // Should not be called for instructions
+      const fetchStub = sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent');
+
+      const promptListStub = sandbox.stub(List.prototype, 'promptList' as keyof List);
+      promptListStub.onFirstCall().resolves({ name: 'CLAUDE.md', type: 'instruction', installed: true });
+      promptListStub.onSecondCall().resolves(null);
+
+      const promptActionStub = sandbox.stub(List.prototype, 'promptAction' as keyof List);
+      promptActionStub.onFirstCall().resolves('view');
+      promptActionStub.onSecondCall().resolves('back');
+
+      const result = await List.run([], oclifConfig);
+
+      expect(result.instructions.length).to.equal(1);
+      expect(fetchStub.called).to.equal(false);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });

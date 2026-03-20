@@ -74,3 +74,15 @@ Failed to install "%s": %s
 # warning.RemoveFailed
 
 Failed to remove "%s": %s
+
+# info.FetchingDetails
+
+Fetching artifact details from source...
+
+# info.NoSourceForDetails
+
+No source repository configured for this artifact.
+
+# warning.FailedToFetchDetails
+
+Could not fetch artifact details: %s
