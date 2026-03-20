@@ -286,4 +286,45 @@ describe('ManifestCache', () => {
       expect(stat.isFile()).to.be.true;
     });
   });
+
+  describe('non-existent directory handling', () => {
+    it('list returns empty array when cache directory does not exist', async () => {
+      // Point to a non-existent directory
+      const nonExistentDir = path.join(tempCacheDir, 'does-not-exist-' + Date.now());
+      ManifestCache.setTestCacheDir(nonExistentDir);
+
+      const repos = await ManifestCache.list();
+
+      expect(repos).to.be.an('array').that.is.empty;
+
+      // Reset
+      ManifestCache.setTestCacheDir(tempCacheDir);
+    });
+
+    it('clear returns 0 when cache directory does not exist', async () => {
+      // Point to a non-existent directory
+      const nonExistentDir = path.join(tempCacheDir, 'does-not-exist-' + Date.now());
+      ManifestCache.setTestCacheDir(nonExistentDir);
+
+      const count = await ManifestCache.clear();
+
+      expect(count).to.equal(0);
+
+      // Reset
+      ManifestCache.setTestCacheDir(tempCacheDir);
+    });
+
+    it('load returns undefined when cache directory does not exist', async () => {
+      // Point to a non-existent directory
+      const nonExistentDir = path.join(tempCacheDir, 'does-not-exist-' + Date.now());
+      ManifestCache.setTestCacheDir(nonExistentDir);
+
+      const entry = await ManifestCache.load('owner/repo');
+
+      expect(entry).to.be.undefined;
+
+      // Reset
+      ManifestCache.setTestCacheDir(tempCacheDir);
+    });
+  });
 });

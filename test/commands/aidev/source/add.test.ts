@@ -347,5 +347,93 @@ describe('aidev source add', () => {
       expect(logStub.callCount).to.equal(2);
       expect(logStub.secondCall.args[0]).to.include('default');
     });
+
+    it('logs auto-discovered message when artifacts were discovered', async () => {
+      const autoDiscoveredResult: AddSourceResult = {
+        success: true,
+        source: { repo: 'owner/repo', isDefault: false, addedAt: '2024-01-01T00:00:00.000Z' },
+        manifest: sampleManifest,
+        autoDiscovered: true,
+      };
+      addStub.resolves(autoDiscoveredResult);
+
+      const cmd = new SourceAdd(['--repo', 'owner/repo'], oclifConfig);
+      const logStub = sandbox.stub(cmd, 'log');
+
+      const result = await cmd.run();
+
+      expect(result.autoDiscovered).to.be.true;
+      expect(logStub.called).to.be.true;
+      // The auto-discovered message should contain "auto-discovered" or similar
+      expect(logStub.firstCall.args[0]).to.include('owner/repo');
+    });
+  });
+
+  describe('NoArtifactsDiscoveredError handling', () => {
+    it('throws NoArtifactsDiscoveredError when no artifacts found in well-known paths', async () => {
+      const noArtifactsResult: AddSourceResult = {
+        success: false,
+        error: 'No manifest.json found and no artifacts discovered in well-known paths in "owner/repo".',
+      };
+      addStub.resolves(noArtifactsResult);
+
+      const cmd = new SourceAdd(['--repo', 'owner/repo'], oclifConfig);
+
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown SfError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).name).to.equal('NoArtifactsDiscoveredError');
+        expect((error as Error).message).to.include('owner/repo');
+      }
+    });
+  });
+
+  describe('autoDiscovered result field', () => {
+    it('returns autoDiscovered true when artifacts were auto-discovered', async () => {
+      const autoDiscoveredResult: AddSourceResult = {
+        success: true,
+        source: { repo: 'owner/repo', isDefault: false, addedAt: '2024-01-01T00:00:00.000Z' },
+        manifest: {
+          version: 'auto',
+          artifacts: [{ name: 'skill1', type: 'skill', description: 'A skill', files: [] }],
+        },
+        autoDiscovered: true,
+      };
+      addStub.resolves(autoDiscoveredResult);
+
+      const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
+
+      expect(result.autoDiscovered).to.be.true;
+    });
+
+    it('returns autoDiscovered false when manifest was fetched normally', async () => {
+      const normalResult: AddSourceResult = {
+        success: true,
+        source: { repo: 'owner/repo', isDefault: false, addedAt: '2024-01-01T00:00:00.000Z' },
+        manifest: sampleManifest,
+        autoDiscovered: false,
+      };
+      addStub.resolves(normalResult);
+
+      const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
+
+      expect(result.autoDiscovered).to.be.false;
+    });
+
+    it('defaults autoDiscovered to false when undefined', async () => {
+      const undefinedAutoDiscoveredResult: AddSourceResult = {
+        success: true,
+        source: { repo: 'owner/repo', isDefault: false, addedAt: '2024-01-01T00:00:00.000Z' },
+        manifest: sampleManifest,
+        // autoDiscovered is undefined
+      };
+      addStub.resolves(undefinedAutoDiscoveredResult);
+
+      const result = await SourceAdd.run(['--repo', 'owner/repo'], oclifConfig);
+
+      expect(result.autoDiscovered).to.be.false;
+    });
   });
 });
