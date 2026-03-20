@@ -22,16 +22,6 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts[0].files[0].source).to.equal('agents/my-agent.md');
       });
 
-      it('discovers skills from skills/ directory', () => {
-        const paths = ['skills/code-review.md'];
-        const manifest = ManifestBuilder.build(paths);
-
-        expect(manifest.artifacts).to.have.length(1);
-        expect(manifest.artifacts[0].name).to.equal('code-review');
-        expect(manifest.artifacts[0].type).to.equal('skill');
-        expect(manifest.artifacts[0].tools).to.be.undefined;
-      });
-
       it('discovers prompts from prompts/ directory', () => {
         const paths = ['prompts/deploy-checklist.md'];
         const manifest = ManifestBuilder.build(paths);
@@ -39,6 +29,62 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts).to.have.length(1);
         expect(manifest.artifacts[0].name).to.equal('deploy-checklist');
         expect(manifest.artifacts[0].type).to.equal('prompt');
+      });
+    });
+
+    describe('skill directory discovery', () => {
+      it('discovers skills as directories with multiple files', () => {
+        const paths = ['skills/code-review/index.md', 'skills/code-review/helpers.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('code-review');
+        expect(manifest.artifacts[0].type).to.equal('skill');
+        expect(manifest.artifacts[0].tools).to.be.undefined;
+        expect(manifest.artifacts[0].files).to.have.length(2);
+        expect(manifest.artifacts[0].files.map((f) => f.source)).to.include('skills/code-review/index.md');
+        expect(manifest.artifacts[0].files.map((f) => f.source)).to.include('skills/code-review/helpers.md');
+      });
+
+      it('discovers skill directory with single file', () => {
+        const paths = ['skills/simple-skill/main.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('simple-skill');
+        expect(manifest.artifacts[0].type).to.equal('skill');
+        expect(manifest.artifacts[0].files).to.have.length(1);
+      });
+
+      it('discovers multiple skill directories', () => {
+        const paths = ['skills/skill-a/index.md', 'skills/skill-b/main.md', 'skills/skill-b/helper.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        expect(manifest.artifacts).to.have.length(2);
+        const skillA = manifest.artifacts.find((a) => a.name === 'skill-a');
+        const skillB = manifest.artifacts.find((a) => a.name === 'skill-b');
+
+        expect(skillA?.files).to.have.length(1);
+        expect(skillB?.files).to.have.length(2);
+      });
+
+      it('discovers tool-specific skill directories', () => {
+        const paths = ['.claude/skills/claude-skill/index.md', '.claude/skills/claude-skill/utils.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('claude-skill');
+        expect(manifest.artifacts[0].type).to.equal('skill');
+        expect(manifest.artifacts[0].tools).to.deep.equal(['claude']);
+        expect(manifest.artifacts[0].files).to.have.length(2);
+      });
+
+      it('ignores files directly in skills/ without subdirectory', () => {
+        const paths = ['skills/standalone-file.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        // Files directly in skills/ don't match the directory pattern
+        expect(manifest.artifacts).to.be.an('array').that.is.empty;
       });
     });
 
@@ -52,12 +98,13 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts[0].tools).to.deep.equal(['claude']);
       });
 
-      it('discovers .claude/skills/* as claude skill', () => {
-        const paths = ['.claude/skills/test-skill.md'];
+      it('discovers .claude/skills/* as claude skill directory', () => {
+        const paths = ['.claude/skills/test-skill/main.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts).to.have.length(1);
         expect(manifest.artifacts[0].type).to.equal('skill');
+        expect(manifest.artifacts[0].name).to.equal('test-skill');
         expect(manifest.artifacts[0].tools).to.deep.equal(['claude']);
       });
 
@@ -92,11 +139,12 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts[0].tools).to.deep.equal(['copilot']);
       });
 
-      it('discovers .github/skills/* as copilot skill', () => {
-        const paths = ['.github/skills/code-analysis.md'];
+      it('discovers .github/skills/* as copilot skill directory', () => {
+        const paths = ['.github/skills/code-analysis/main.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('code-analysis');
         expect(manifest.artifacts[0].type).to.equal('skill');
         expect(manifest.artifacts[0].tools).to.deep.equal(['copilot']);
       });
@@ -121,11 +169,12 @@ describe('ManifestBuilder', () => {
     });
 
     describe('cursor patterns', () => {
-      it('discovers .cursor/skills/* as cursor skill', () => {
-        const paths = ['.cursor/skills/refactor.md'];
+      it('discovers .cursor/skills/* as cursor skill directory', () => {
+        const paths = ['.cursor/skills/refactor/index.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('refactor');
         expect(manifest.artifacts[0].type).to.equal('skill');
         expect(manifest.artifacts[0].tools).to.deep.equal(['cursor']);
       });
@@ -160,11 +209,12 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts[0].tools).to.deep.equal(['gemini']);
       });
 
-      it('discovers .gemini/skills/* as gemini skill', () => {
-        const paths = ['.gemini/skills/test.md'];
+      it('discovers .gemini/skills/* as gemini skill directory', () => {
+        const paths = ['.gemini/skills/test/main.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('test');
         expect(manifest.artifacts[0].type).to.equal('skill');
         expect(manifest.artifacts[0].tools).to.deep.equal(['gemini']);
       });
@@ -180,11 +230,12 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts[0].tools).to.deep.equal(['codex']);
       });
 
-      it('discovers .codex/skills/* as codex skill', () => {
-        const paths = ['.codex/skills/debug.md'];
+      it('discovers .codex/skills/* as codex skill directory', () => {
+        const paths = ['.codex/skills/debug/main.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts).to.have.length(1);
+        expect(manifest.artifacts[0].name).to.equal('debug');
         expect(manifest.artifacts[0].type).to.equal('skill');
         expect(manifest.artifacts[0].tools).to.deep.equal(['codex']);
       });
@@ -205,21 +256,13 @@ describe('ManifestBuilder', () => {
         expect(manifest.artifacts).to.be.an('array').that.is.empty;
       });
 
-      it('ignores deeply nested files (only matches one level deep)', () => {
-        const paths = ['agents/nested/deep/agent.md', 'skills/nested/skill.md'];
-        const manifest = ManifestBuilder.build(paths);
-
-        expect(manifest.artifacts).to.be.an('array').that.is.empty;
-      });
-
       it('extracts name correctly from various file extensions', () => {
-        const paths = ['agents/agent.md', 'skills/skill.yaml', 'prompts/prompt.txt'];
+        const paths = ['agents/agent.md', 'prompts/prompt.txt'];
         const manifest = ManifestBuilder.build(paths);
 
-        expect(manifest.artifacts).to.have.length(3);
+        expect(manifest.artifacts).to.have.length(2);
         expect(manifest.artifacts[0].name).to.equal('agent');
-        expect(manifest.artifacts[1].name).to.equal('skill');
-        expect(manifest.artifacts[2].name).to.equal('prompt');
+        expect(manifest.artifacts[1].name).to.equal('prompt');
       });
 
       it('handles files with multiple dots in name', () => {
@@ -234,7 +277,7 @@ describe('ManifestBuilder', () => {
     describe('combined discovery', () => {
       it('discovers artifacts from multiple tool directories', () => {
         const paths = [
-          '.claude/skills/claude-skill.md',
+          '.claude/skills/claude-skill/index.md',
           '.github/agents/copilot-agent.md',
           'agents/generic-agent.md',
           'README.md',
@@ -272,6 +315,13 @@ describe('ManifestBuilder', () => {
     describe('auto-discovered artifacts', () => {
       it('does not generate description for auto-discovered artifacts', () => {
         const paths = ['agents/my-agent.md'];
+        const manifest = ManifestBuilder.build(paths);
+
+        expect(manifest.artifacts[0].description).to.be.undefined;
+      });
+
+      it('does not generate description for skill directories', () => {
+        const paths = ['skills/my-skill/index.md'];
         const manifest = ManifestBuilder.build(paths);
 
         expect(manifest.artifacts[0].description).to.be.undefined;

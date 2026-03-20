@@ -19,44 +19,78 @@ interface DiscoveryRule {
 }
 
 /**
+ * Skill directory rule for matching files inside skill directories.
+ */
+interface SkillDirectoryRule {
+  /** Regex pattern to match files inside skill directories (captures dirName and fileName) */
+  pattern: RegExp;
+  /** Optional tool this skill is specific to */
+  tool?: string;
+}
+
+/**
+ * Information about a discovered skill directory.
+ */
+interface SkillDirInfo {
+  /** Files belonging to this skill */
+  files: string[];
+  /** Tool this skill is specific to (if any) */
+  tool?: string;
+}
+
+/**
  * Builds a Manifest from a list of file paths by discovering artifacts
  * in well-known directories.
  */
 export class ManifestBuilder {
   /**
+   * Skill directory rules - match files inside skill directories.
+   * Patterns capture (dirName, fileName) groups.
+   */
+  private static readonly SKILL_DIRECTORY_RULES: SkillDirectoryRule[] = [
+    // Generic skills
+    { pattern: /^skills\/([^/]+)\/(.+)$/ },
+    // Claude skills
+    { pattern: /^\.claude\/skills\/([^/]+)\/(.+)$/, tool: 'claude' },
+    // Copilot skills
+    { pattern: /^\.github\/skills\/([^/]+)\/(.+)$/, tool: 'copilot' },
+    // Cursor skills
+    { pattern: /^\.cursor\/skills\/([^/]+)\/(.+)$/, tool: 'cursor' },
+    // Gemini skills
+    { pattern: /^\.gemini\/skills\/([^/]+)\/(.+)$/, tool: 'gemini' },
+    // Codex skills
+    { pattern: /^\.codex\/skills\/([^/]+)\/(.+)$/, tool: 'codex' },
+  ];
+
+  /**
    * Discovery rules table - order matters (first match wins).
    * Patterns match file paths relative to repo root.
+   * Note: Skills are now discovered as directories via SKILL_DIRECTORY_RULES.
    */
   private static readonly DISCOVERY_RULES: DiscoveryRule[] = [
-    // Generic patterns (all tools)
+    // Generic patterns (all tools) - agents and prompts only
     { pattern: /^agents\/[^/]+$/, type: 'agent' },
-    { pattern: /^skills\/[^/]+$/, type: 'skill' },
     { pattern: /^prompts\/[^/]+$/, type: 'prompt' },
 
     // Claude patterns
     { pattern: /^\.claude\/agents\/[^/]+$/, type: 'agent', tool: 'claude' },
-    { pattern: /^\.claude\/skills\/[^/]+$/, type: 'skill', tool: 'claude' },
     { pattern: /^CLAUDE\.md$/, type: 'prompt', tool: 'claude' },
     { pattern: /^\.claude\/CLAUDE\.md$/, type: 'prompt', tool: 'claude' },
 
     // Copilot patterns
     { pattern: /^\.github\/copilot-instructions\.md$/, type: 'prompt', tool: 'copilot' },
-    { pattern: /^\.github\/skills\/[^/]+$/, type: 'skill', tool: 'copilot' },
     { pattern: /^\.github\/agents\/[^/]+$/, type: 'agent', tool: 'copilot' },
     { pattern: /^\.github\/prompts\/[^/]+$/, type: 'prompt', tool: 'copilot' },
 
     // Cursor patterns
-    { pattern: /^\.cursor\/skills\/[^/]+$/, type: 'skill', tool: 'cursor' },
     { pattern: /^\.cursor\/agents\/[^/]+$/, type: 'agent', tool: 'cursor' },
     { pattern: /^\.cursorrules$/, type: 'prompt', tool: 'cursor' },
 
     // Gemini patterns
     { pattern: /^\.gemini\/agents\/[^/]+$/, type: 'agent', tool: 'gemini' },
-    { pattern: /^\.gemini\/skills\/[^/]+$/, type: 'skill', tool: 'gemini' },
 
     // Codex patterns
     { pattern: /^\.codex\/agents\/[^/]+$/, type: 'agent', tool: 'codex' },
-    { pattern: /^\.codex\/skills\/[^/]+$/, type: 'skill', tool: 'codex' },
   ];
 
   /**
@@ -68,6 +102,13 @@ export class ManifestBuilder {
   public static build(filePaths: string[]): Manifest {
     const artifacts: Artifact[] = [];
 
+    // First pass: discover skill directories
+    const skillDirs = this.discoverSkillDirectories(filePaths);
+    for (const [dirName, info] of skillDirs) {
+      artifacts.push(this.createSkillArtifact(dirName, info.files, info.tool));
+    }
+
+    // Second pass: discover single-file artifacts (agents, prompts)
     for (const path of filePaths) {
       for (const rule of this.DISCOVERY_RULES) {
         if (rule.pattern.test(path)) {
@@ -81,6 +122,52 @@ export class ManifestBuilder {
       version: 'auto',
       artifacts,
     };
+  }
+
+  /**
+   * Discover skill directories by grouping files by their parent directory.
+   *
+   * @param filePaths - Array of file paths.
+   * @returns Map of skill directory names to their info (files and tool).
+   */
+  private static discoverSkillDirectories(filePaths: string[]): Map<string, SkillDirInfo> {
+    const skillDirs = new Map<string, SkillDirInfo>();
+
+    for (const path of filePaths) {
+      for (const rule of this.SKILL_DIRECTORY_RULES) {
+        const match = path.match(rule.pattern);
+        if (match) {
+          const [, dirName] = match;
+          const existing = skillDirs.get(dirName);
+          if (existing) {
+            existing.files.push(path);
+            // Keep the most specific tool (first one wins)
+          } else {
+            skillDirs.set(dirName, { files: [path], tool: rule.tool });
+          }
+          break; // First matching rule wins
+        }
+      }
+    }
+
+    return skillDirs;
+  }
+
+  /**
+   * Create a skill Artifact from a directory with multiple files.
+   */
+  private static createSkillArtifact(name: string, files: string[], tool?: string): Artifact {
+    const artifact: Artifact = {
+      name,
+      type: 'skill',
+      files: files.map((f) => ({ source: f })),
+    };
+
+    if (tool) {
+      artifact.tools = [tool];
+    }
+
+    return artifact;
   }
 
   /**
