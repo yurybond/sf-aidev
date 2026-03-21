@@ -8,7 +8,7 @@
 /**
  * Type of artifact that can be installed.
  */
-export type ArtifactType = 'skill' | 'agent' | 'prompt';
+export type ArtifactType = 'skill' | 'agent' | 'prompt' | 'command';
 
 /**
  * Represents a file within an artifact.

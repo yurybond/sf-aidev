@@ -60,6 +60,7 @@ export type GroupedArtifacts = {
   agents: MergedArtifact[];
   skills: MergedArtifact[];
   prompts: MergedArtifact[];
+  commands: MergedArtifact[];
   instructions: MergedArtifact[];
 };
 
@@ -113,6 +114,16 @@ export class LocalFileScanner {
   }
 
   /**
+   * Scan for all command artifacts across all supported tools.
+   *
+   * @param projectPath - Absolute path to the project root.
+   * @returns Array of scanned command artifacts.
+   */
+  public static async scanCommands(projectPath: string): Promise<ScannedArtifact[]> {
+    return this.scanArtifactType(projectPath, 'command');
+  }
+
+  /**
    * Scan for instruction files (CLAUDE.md, *.instructions.md, etc.).
    *
    * @param projectPath - Absolute path to the project root.
@@ -161,19 +172,20 @@ export class LocalFileScanner {
   }
 
   /**
-   * Scan for all artifacts (agents, skills, prompts) across all tools.
+   * Scan for all artifacts (agents, skills, prompts, commands) across all tools.
    *
    * @param projectPath - Absolute path to the project root.
    * @returns Array of all scanned artifacts.
    */
   public static async scanAll(projectPath: string): Promise<ScannedArtifact[]> {
-    const [agents, skills, prompts] = await Promise.all([
+    const [agents, skills, prompts, commands] = await Promise.all([
       this.scanAgents(projectPath),
       this.scanSkills(projectPath),
       this.scanPrompts(projectPath),
+      this.scanCommands(projectPath),
     ]);
 
-    return [...agents, ...skills, ...prompts];
+    return [...agents, ...skills, ...prompts, ...commands];
   }
 
   /**
@@ -244,6 +256,7 @@ export class LocalFileScanner {
       agents: [],
       skills: [],
       prompts: [],
+      commands: [],
       instructions: [],
     };
 
@@ -257,6 +270,9 @@ export class LocalFileScanner {
           break;
         case 'prompt':
           groups.prompts.push(artifact);
+          break;
+        case 'command':
+          groups.commands.push(artifact);
           break;
         default:
           break;
@@ -274,6 +290,7 @@ export class LocalFileScanner {
     groups.agents.sort((a, b) => a.name.localeCompare(b.name));
     groups.skills.sort((a, b) => a.name.localeCompare(b.name));
     groups.prompts.sort((a, b) => a.name.localeCompare(b.name));
+    groups.commands.sort((a, b) => a.name.localeCompare(b.name));
     groups.instructions.sort((a, b) => a.name.localeCompare(b.name));
 
     return groups;
@@ -318,10 +335,10 @@ export class LocalFileScanner {
 
   /**
    * Extract artifact name from filename/dirname.
-   * For skills, removes .md extension.
+   * For skills and commands, removes .md extension if present.
    */
   private static getArtifactName(entry: string, type: ArtifactType): string {
-    if (type === 'skill' && entry.endsWith('.md')) {
+    if ((type === 'skill' || type === 'command') && entry.endsWith('.md')) {
       return basename(entry, '.md');
     }
     return entry;

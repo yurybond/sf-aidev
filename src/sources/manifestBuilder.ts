@@ -29,12 +29,32 @@ interface SkillDirectoryRule {
 }
 
 /**
+ * Command directory rule for matching files inside command directories.
+ */
+interface CommandDirectoryRule {
+  /** Regex pattern to match files inside command directories (captures dirName and fileName) */
+  pattern: RegExp;
+  /** Optional tool this command is specific to */
+  tool?: string;
+}
+
+/**
  * Information about a discovered skill directory.
  */
 interface SkillDirInfo {
   /** Files belonging to this skill */
   files: string[];
   /** Tool this skill is specific to (if any) */
+  tool?: string;
+}
+
+/**
+ * Information about a discovered command directory.
+ */
+interface CommandDirInfo {
+  /** Files belonging to this command */
+  files: string[];
+  /** Tool this command is specific to (if any) */
   tool?: string;
 }
 
@@ -63,24 +83,40 @@ export class ManifestBuilder {
   ];
 
   /**
+   * Command directory rules - match files inside command directories.
+   * Patterns capture (dirName, fileName) groups.
+   */
+  private static readonly COMMAND_DIRECTORY_RULES: CommandDirectoryRule[] = [
+    // Generic commands
+    { pattern: /^commands\/([^/]+)\/(.+)$/ },
+    // Claude commands
+    { pattern: /^\.claude\/commands\/([^/]+)\/(.+)$/, tool: 'claude' },
+    // Copilot commands
+    { pattern: /^\.github\/commands\/([^/]+)\/(.+)$/, tool: 'copilot' },
+  ];
+
+  /**
    * Discovery rules table - order matters (first match wins).
    * Patterns match file paths relative to repo root.
-   * Note: Skills are now discovered as directories via SKILL_DIRECTORY_RULES.
+   * Note: Skills and commands are now discovered as directories via SKILL_DIRECTORY_RULES and COMMAND_DIRECTORY_RULES.
    */
   private static readonly DISCOVERY_RULES: DiscoveryRule[] = [
-    // Generic patterns (all tools) - agents and prompts only
+    // Generic patterns (all tools) - agents, prompts, and single-file commands
     { pattern: /^agents\/[^/]+$/, type: 'agent' },
     { pattern: /^prompts\/[^/]+$/, type: 'prompt' },
+    { pattern: /^commands\/[^/]+\.md$/, type: 'command' },
 
     // Claude patterns
     { pattern: /^\.claude\/agents\/[^/]+$/, type: 'agent', tool: 'claude' },
     { pattern: /^CLAUDE\.md$/, type: 'prompt', tool: 'claude' },
     { pattern: /^\.claude\/CLAUDE\.md$/, type: 'prompt', tool: 'claude' },
+    { pattern: /^\.claude\/commands\/[^/]+\.md$/, type: 'command', tool: 'claude' },
 
     // Copilot patterns
     { pattern: /^\.github\/copilot-instructions\.md$/, type: 'prompt', tool: 'copilot' },
     { pattern: /^\.github\/agents\/[^/]+$/, type: 'agent', tool: 'copilot' },
     { pattern: /^\.github\/prompts\/[^/]+$/, type: 'prompt', tool: 'copilot' },
+    { pattern: /^\.github\/commands\/[^/]+\.md$/, type: 'command', tool: 'copilot' },
 
     // Cursor patterns
     { pattern: /^\.cursor\/agents\/[^/]+$/, type: 'agent', tool: 'cursor' },
@@ -108,7 +144,13 @@ export class ManifestBuilder {
       artifacts.push(this.createSkillArtifact(dirName, info.files, info.tool));
     }
 
-    // Second pass: discover single-file artifacts (agents, prompts)
+    // Second pass: discover command directories
+    const commandDirs = this.discoverCommandDirectories(filePaths);
+    for (const [dirName, info] of commandDirs) {
+      artifacts.push(this.createCommandArtifact(dirName, info.files, info.tool));
+    }
+
+    // Third pass: discover single-file artifacts (agents, prompts, single-file commands)
     for (const path of filePaths) {
       for (const rule of this.DISCOVERY_RULES) {
         if (rule.pattern.test(path)) {
@@ -154,12 +196,58 @@ export class ManifestBuilder {
   }
 
   /**
+   * Discover command directories by grouping files by their parent directory.
+   *
+   * @param filePaths - Array of file paths.
+   * @returns Map of command directory names to their info (files and tool).
+   */
+  private static discoverCommandDirectories(filePaths: string[]): Map<string, CommandDirInfo> {
+    const commandDirs = new Map<string, CommandDirInfo>();
+
+    for (const path of filePaths) {
+      for (const rule of this.COMMAND_DIRECTORY_RULES) {
+        const match = path.match(rule.pattern);
+        if (match) {
+          const [, dirName] = match;
+          const existing = commandDirs.get(dirName);
+          if (existing) {
+            existing.files.push(path);
+            // Keep the most specific tool (first one wins)
+          } else {
+            commandDirs.set(dirName, { files: [path], tool: rule.tool });
+          }
+          break; // First matching rule wins
+        }
+      }
+    }
+
+    return commandDirs;
+  }
+
+  /**
    * Create a skill Artifact from a directory with multiple files.
    */
   private static createSkillArtifact(name: string, files: string[], tool?: string): Artifact {
     const artifact: Artifact = {
       name,
       type: 'skill',
+      files: files.map((f) => ({ source: f })),
+    };
+
+    if (tool) {
+      artifact.tools = [tool];
+    }
+
+    return artifact;
+  }
+
+  /**
+   * Create a command Artifact from a directory with multiple files.
+   */
+  private static createCommandArtifact(name: string, files: string[], tool?: string): Artifact {
+    const artifact: Artifact = {
+      name,
+      type: 'command',
       files: files.map((f) => ({ source: f })),
     };
 

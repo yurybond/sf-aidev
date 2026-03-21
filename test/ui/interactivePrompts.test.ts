@@ -12,12 +12,14 @@ import {
   toSelectChoices,
   toCheckboxChoices,
   toGroupedCheckboxChoices,
+  toExpandableChoices,
   promptArtifactList,
   promptArtifactAction,
   promptArtifactCheckbox,
   promptGroupedCheckbox,
 } from '../../src/ui/interactivePrompts.js';
 import type { GroupedArtifacts, MergedArtifact } from '../../src/services/localFileScanner.js';
+import type { ExpandableChoice, ExpandableSeparator } from '../../src/ui/expandableSelect.js';
 
 describe('interactivePrompts', () => {
   const sandbox = sinon.createSandbox();
@@ -43,6 +45,7 @@ describe('interactivePrompts', () => {
           { name: 'skill2', type: 'skill', installed: true },
         ],
         prompts: [],
+        commands: [],
         instructions: [{ name: 'CLAUDE.md', type: 'instruction', installed: true }],
       };
 
@@ -66,6 +69,7 @@ describe('interactivePrompts', () => {
         agents: [],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -78,6 +82,7 @@ describe('interactivePrompts', () => {
         agents: [],
         skills: [{ name: 'test-skill', type: 'skill', installed: false, description: 'Test description' }],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -123,6 +128,7 @@ describe('interactivePrompts', () => {
       ],
       skills: [{ name: 'skill1', type: 'skill', installed: true }],
       prompts: [{ name: 'prompt1', type: 'prompt', installed: false }],
+      commands: [],
       instructions: [],
     };
 
@@ -171,6 +177,7 @@ describe('interactivePrompts', () => {
         agents: [],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -208,6 +215,7 @@ describe('interactivePrompts', () => {
         agents: [],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -220,12 +228,103 @@ describe('interactivePrompts', () => {
         agents: [{ name: 'available-agent', type: 'agent', installed: false }],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
       // Filter for installed only - none will match
       const result = await promptGroupedCheckbox(groups, 'Select artifacts', 'installed');
       expect(result).to.deep.equal([]);
+    });
+  });
+
+  describe('toExpandableChoices', () => {
+    it('converts grouped artifacts to expandable choices with separators', () => {
+      const groups: GroupedArtifacts = {
+        agents: [{ name: 'agent1', type: 'agent', installed: true }],
+        skills: [
+          { name: 'skill1', type: 'skill', installed: false, description: 'A skill' },
+          { name: 'skill2', type: 'skill', installed: true },
+        ],
+        prompts: [],
+        commands: [],
+        instructions: [{ name: 'CLAUDE.md', type: 'instruction', installed: true }],
+      };
+
+      const choices = toExpandableChoices(groups);
+
+      // Should have separators and items
+      expect(choices.length).to.be.greaterThan(0);
+
+      // First should be a separator for Agents
+      expect((choices[0] as ExpandableSeparator).type).to.equal('separator');
+      expect((choices[0] as ExpandableSeparator).separator).to.equal('--- Agents ---');
+
+      // Find agent choice
+      const agentChoice = choices.find(
+        (c) => !('type' in c && c.type === 'separator') && (c as ExpandableChoice).value.name === 'agent1'
+      ) as ExpandableChoice;
+      expect(agentChoice).to.not.be.undefined;
+      expect(agentChoice.value.type).to.equal('agent');
+
+      // Find skill choices
+      const skillChoices = choices.filter(
+        (c) => !('type' in c && c.type === 'separator') && (c as ExpandableChoice).value.type === 'skill'
+      );
+      expect(skillChoices.length).to.equal(2);
+    });
+
+    it('returns empty array for empty groups', () => {
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [],
+        prompts: [],
+        commands: [],
+        instructions: [],
+      };
+
+      const choices = toExpandableChoices(groups);
+      expect(choices).to.deep.equal([]);
+    });
+
+    it('excludes empty groups', () => {
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [{ name: 'test-skill', type: 'skill', installed: false }],
+        prompts: [],
+        commands: [],
+        instructions: [],
+      };
+
+      const choices = toExpandableChoices(groups);
+
+      // Should only have Skills separator
+      const separators = choices.filter((c) => 'type' in c && c.type === 'separator');
+      expect(separators.length).to.equal(1);
+      expect((separators[0] as ExpandableSeparator).separator).to.equal('--- Skills ---');
+    });
+
+    it('preserves artifact values in choices', () => {
+      const artifact: MergedArtifact = {
+        name: 'my-skill',
+        type: 'skill',
+        installed: true,
+        description: 'Test description',
+        source: 'owner/repo',
+      };
+
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [artifact],
+        prompts: [],
+        commands: [],
+        instructions: [],
+      };
+
+      const choices = toExpandableChoices(groups);
+      const skillChoice = choices.find((c) => !('type' in c && c.type === 'separator')) as ExpandableChoice;
+
+      expect(skillChoice.value).to.deep.equal(artifact);
     });
   });
 });

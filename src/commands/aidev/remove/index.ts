@@ -81,6 +81,7 @@ export default class Remove extends SfCommand<RemoveResult> {
       agents: merged.filter((a) => a.type === 'agent'),
       skills: merged.filter((a) => a.type === 'skill'),
       prompts: merged.filter((a) => a.type === 'prompt'),
+      commands: merged.filter((a) => a.type === 'command'),
       instructions: [],
     };
 

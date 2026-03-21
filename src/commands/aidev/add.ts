@@ -31,6 +31,7 @@ const TYPE_LABELS: Record<ArtifactType, string> = {
   agent: 'Agents',
   skill: 'Skills',
   prompt: 'Prompts',
+  command: 'Commands',
 };
 
 /**
@@ -187,7 +188,7 @@ export default class Add extends SfCommand<AddResult> {
    */
   protected async promptCheckbox(
     message: string,
-    choices: Array<CheckboxChoice | Separator>,
+    choices: Array<CheckboxChoice | Separator>
   ): Promise<AvailableArtifact[]> {
     // Use this.spinner to satisfy class-methods-use-this rule
     // The spinner is already stopped before this method is called
