@@ -1616,10 +1616,34 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@oclif/core@4.9.0", "@oclif/core@^4", "@oclif/core@^4.5.2", "@oclif/core@^4.9.0":
+"@oclif/core@4.9.0":
   version "4.9.0"
   resolved "https://registry.npmjs.org/@oclif/core/-/core-4.9.0.tgz"
   integrity sha512-k/ntRgDcUprTT+aaNoF+whk3cY3f9fRD2lkF6ul7JeCUg2MaMXVXZXfbRhJCfsiX51X8/5Pqo0LGdO9SLYXNHg==
+  dependencies:
+    ansi-escapes "^4.3.2"
+    ansis "^3.17.0"
+    clean-stack "^3.0.1"
+    cli-spinners "^2.9.2"
+    debug "^4.4.3"
+    ejs "^3.1.10"
+    get-package-type "^0.1.0"
+    indent-string "^4.0.0"
+    is-wsl "^2.2.0"
+    lilconfig "^3.1.3"
+    minimatch "^10.2.4"
+    semver "^7.7.3"
+    string-width "^4.2.3"
+    supports-color "^8"
+    tinyglobby "^0.2.14"
+    widest-line "^3.1.0"
+    wordwrap "^1.0.0"
+    wrap-ansi "^7.0.0"
+
+"@oclif/core@^4", "@oclif/core@^4.5.2", "@oclif/core@^4.9.0":
+  version "4.10.2"
+  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-4.10.2.tgz#9cda34a5cb389a7d225cd484c21c6e87f76bb5ee"
+  integrity sha512-3GvDh5nqpIE8566qUF5cBHKog9DFV9XgBeuR0nUrz0OMuz2FPYHat1AZHOwyQbvH9OKL4gJNQZHcsDOqDM/FRA==
   dependencies:
     ansi-escapes "^4.3.2"
     ansis "^3.17.0"
@@ -1752,9 +1776,9 @@
     ts-retry-promise "^0.8.1"
 
 "@salesforce/core@^8", "@salesforce/core@^8.18.7", "@salesforce/core@^8.23.1", "@salesforce/core@^8.8.0":
-  version "8.27.0"
-  resolved "https://registry.npmjs.org/@salesforce/core/-/core-8.27.0.tgz"
-  integrity sha512-Je//0ySHRJRTD16dFxdm6J624i+oufKNq+o8O1AoUNYlT/k4SJi/YGt+iGlKesZGxPf7X1zzUPY1S6C99c/UBA==
+  version "8.27.1"
+  resolved "https://registry.yarnpkg.com/@salesforce/core/-/core-8.27.1.tgz#26b08b0d68dd1fc210d1dd7a7e3770e3b9f27e74"
+  integrity sha512-1WpVt9tQAEINGzsQsSiVRmcmYUpKeK4P54624f9HvLIv7o7jTjdARwirJpOqivIihbDE8OJnYOdsr0vV5Dz93A==
   dependencies:
     "@jsforce/jsforce-node" "^3.10.13"
     "@salesforce/kit" "^3.2.4"
@@ -6639,10 +6663,10 @@ object.values@^1.2.1:
     define-properties "^1.2.1"
     es-object-atoms "^1.0.0"
 
-oclif@^4.14.0:
-  version "4.22.92"
-  resolved "https://registry.npmjs.org/oclif/-/oclif-4.22.92.tgz"
-  integrity sha512-pjz5noZi8FvsYExsqNS493hWy5zccphMyLQGDJ6xWjSUkgZz4jaj1ZS8nj/QqZzKXrKHC8DXRDiVnqmcw+evBw==
+oclif@^4.22.93:
+  version "4.22.93"
+  resolved "https://registry.yarnpkg.com/oclif/-/oclif-4.22.93.tgz#45a95adb76d4d0a29764b9affb5150c2b8df6cb1"
+  integrity sha512-x7FjnZOTuKl4p6KsWFZ2nCH3jQv0EU7+fG+udUHgV+CnXx6xGgCGPfkkDv3jYzjlcW7v1P62f3Ab8hudR0zrnA==
   dependencies:
     "@aws-sdk/client-cloudfront" "3.1009.0"
     "@aws-sdk/client-s3" "3.1009.0"
