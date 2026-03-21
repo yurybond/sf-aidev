@@ -46,6 +46,7 @@ describe('InteractiveTable', () => {
         agents: [{ name: 'agent1', type: 'agent', installed: true }],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -61,6 +62,7 @@ describe('InteractiveTable', () => {
         agents: [],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -75,6 +77,7 @@ describe('InteractiveTable', () => {
         agents: [],
         skills: [{ name: 'skill1', type: 'skill', installed: true }],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -90,6 +93,7 @@ describe('InteractiveTable', () => {
         agents: [],
         skills: [],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -131,6 +135,7 @@ describe('InteractiveTable', () => {
           { name: 's2', type: 'skill', installed: false },
         ],
         prompts: [],
+        commands: [],
         instructions: [{ name: 'i1', type: 'instruction', installed: true }],
       };
 
@@ -147,6 +152,7 @@ describe('InteractiveTable', () => {
           { name: 's2', type: 'skill', installed: false },
         ],
         prompts: [{ name: 'p1', type: 'prompt', installed: false }],
+        commands: [],
         instructions: [],
       };
 
@@ -162,6 +168,7 @@ describe('InteractiveTable', () => {
         agents: [{ name: 'agent1', type: 'agent', installed: true }],
         skills: [{ name: 'skill1', type: 'skill', installed: false, description: 'A skill' }],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 
@@ -180,6 +187,7 @@ describe('InteractiveTable', () => {
         agents: [],
         skills: [{ name: 'test', type: 'skill', installed: false, description: 'Test desc' }],
         prompts: [],
+        commands: [],
         instructions: [],
       };
 

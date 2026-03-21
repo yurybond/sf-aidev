@@ -11,12 +11,8 @@ import { LocalFileScanner, type GroupedArtifacts, type MergedArtifact } from '..
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
 import { InteractiveTable } from '../../../ui/interactiveTable.js';
 import { FrontmatterParser } from '../../../utils/frontmatterParser.js';
-import {
-  isInteractive,
-  promptArtifactList,
-  promptArtifactAction,
-  type ArtifactAction,
-} from '../../../ui/interactivePrompts.js';
+import { isInteractive, toExpandableChoices } from '../../../ui/interactivePrompts.js';
+import { expandableSelect } from '../../../ui/expandableSelect.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-aidev', 'aidev.list');
@@ -25,6 +21,7 @@ export type ListResult = {
   agents: MergedArtifact[];
   skills: MergedArtifact[];
   prompts: MergedArtifact[];
+  commands: MergedArtifact[];
   instructions: MergedArtifact[];
   counts: {
     installed: number;
@@ -91,6 +88,7 @@ export default class List extends SfCommand<ListResult> {
       agents: groups.agents,
       skills: groups.skills,
       prompts: groups.prompts,
+      commands: groups.commands,
       instructions: groups.instructions,
       counts: {
         installed: counts.installed,
@@ -101,169 +99,57 @@ export default class List extends SfCommand<ListResult> {
   }
 
   /**
-   * Run interactive list with action sub-menu.
+   * Run interactive list with expandable descriptions.
+   * Users can press Enter to toggle inline description display.
    */
   protected async runInteractive(groups: GroupedArtifacts, service: ArtifactService): Promise<void> {
-    let continueLoop = true;
+    const choices = toExpandableChoices(groups);
 
-    while (continueLoop) {
-      // eslint-disable-next-line no-await-in-loop
-      const selected = await this.promptList(groups, messages.getMessage('prompt.Select'));
-
-      if (!selected) {
-        // User cancelled (Escape/Ctrl+C)
-        continueLoop = false;
-        break;
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      const action = await this.promptAction(selected);
-
-      if (!action || action === 'back') {
-        // Continue to list
-        continue;
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      await this.executeAction(action, selected, service, groups);
-
-      // After install/remove, the list needs to be refreshed
-      // For simplicity, we continue with the current state
-      // A full refresh would require re-scanning
+    if (choices.length === 0) {
+      this.log(messages.getMessage('info.NoArtifacts'));
+      return;
     }
+
+    await this.runExpandableSelect(choices, service);
   }
 
   /**
-   * Execute the selected action on an artifact.
+   * Run the expandable select prompt.
+   * Extracted for test stubbing.
    */
-  protected async executeAction(
-    action: ArtifactAction,
-    artifact: MergedArtifact,
-    service: ArtifactService,
-    groups: GroupedArtifacts,
+  // eslint-disable-next-line class-methods-use-this
+  protected async runExpandableSelect(
+    choices: ReturnType<typeof toExpandableChoices>,
+    service: ArtifactService
   ): Promise<void> {
-    switch (action) {
-      case 'view':
-        await this.displayArtifactDetails(artifact, service);
-        break;
+    await expandableSelect({
+      message: messages.getMessage('prompt.Select'),
+      choices,
+      onFetchDescription: async (artifact: MergedArtifact): Promise<string | undefined> => {
+        // Instructions don't have source descriptions
+        if (artifact.type === 'instruction' || !artifact.source) {
+          return artifact.description;
+        }
 
-      case 'install':
-        if (artifact.type === 'instruction') {
-          this.log(messages.getMessage('info.CannotInstallInstruction'));
-        } else {
-          this.spinner.start(messages.getMessage('info.Installing', [artifact.name]));
-          const installResult = await service.install(artifact.name, {
-            type: artifact.type,
+        // Fetch content and extract frontmatter description
+        try {
+          const content = await service.fetchArtifactContent(artifact.name, {
             source: artifact.source,
+            type: artifact.type,
           });
-          this.spinner.stop();
 
-          if (installResult.success) {
-            this.log(messages.getMessage('info.Installed', [artifact.name, installResult.installedPath]));
-            // Update the artifact's installed status in the groups
-            this.updateArtifactStatus(groups, artifact, true);
-          } else {
-            this.warn(messages.getMessage('warning.InstallFailed', [artifact.name, installResult.error ?? 'Unknown']));
+          if (content) {
+            const frontmatterDesc = FrontmatterParser.extractDescription(content);
+            return frontmatterDesc ?? artifact.description;
           }
+        } catch {
+          // Fall back to manifest description on error
         }
-        break;
 
-      case 'remove':
-        if (artifact.type === 'instruction') {
-          this.log(messages.getMessage('info.CannotRemoveInstruction'));
-        } else {
-          this.spinner.start(messages.getMessage('info.Removing', [artifact.name]));
-          const removeResult = await service.uninstall(artifact.name, { type: artifact.type });
-          this.spinner.stop();
-
-          if (removeResult.success) {
-            this.log(messages.getMessage('info.Removed', [artifact.name]));
-            // Update the artifact's installed status in the groups
-            this.updateArtifactStatus(groups, artifact, false);
-          } else {
-            this.warn(messages.getMessage('warning.RemoveFailed', [artifact.name, removeResult.error ?? 'Unknown']));
-          }
-        }
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  /**
-   * Display detailed information about an artifact.
-   * Fetches content from source repo to extract frontmatter description.
-   */
-  protected async displayArtifactDetails(artifact: MergedArtifact, service: ArtifactService): Promise<void> {
-    this.log('');
-    this.log(`Name: ${artifact.name}`);
-    this.log(`Type: ${artifact.type}`);
-    this.log(`Status: ${artifact.installed ? 'Installed' : 'Available'}`);
-
-    // Try to fetch artifact content and extract frontmatter description
-    let frontmatterDescription: string | undefined;
-
-    if (artifact.source && artifact.type !== 'instruction') {
-      this.spinner.start(messages.getMessage('info.FetchingDetails'));
-      try {
-        const content = await service.fetchArtifactContent(artifact.name, {
-          source: artifact.source,
-          type: artifact.type,
-        });
-        this.spinner.stop();
-
-        if (content) {
-          frontmatterDescription = FrontmatterParser.extractDescription(content);
-        }
-      } catch (error) {
-        this.spinner.stop();
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        this.warn(messages.getMessage('warning.FailedToFetchDetails', [errorMsg]));
-      }
-    }
-
-    // Show frontmatter description if available, otherwise fall back to manifest description
-    const displayDescription = frontmatterDescription ?? artifact.description;
-    if (displayDescription) {
-      this.log(`Description: ${displayDescription}`);
-    }
-
-    if (artifact.source) {
-      this.log(`Source: ${artifact.source}`);
-    }
-    this.log('');
-  }
-
-  /**
-   * Update an artifact's installed status in the groups.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  protected updateArtifactStatus(groups: GroupedArtifacts, artifact: MergedArtifact, installed: boolean): void {
-    const groupKey = `${artifact.type}s` as keyof GroupedArtifacts;
-    const group = groups[groupKey];
-    const found = group.find((a) => a.name === artifact.name);
-    if (found) {
-      found.installed = installed;
-    }
-  }
-
-  /**
-   * Prompt user to select an artifact from the list.
-   * Extracted for test stubbing.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  protected async promptList(groups: GroupedArtifacts, message: string): Promise<MergedArtifact | null> {
-    return promptArtifactList(groups, message);
-  }
-
-  /**
-   * Prompt user to select an action for an artifact.
-   * Extracted for test stubbing.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  protected async promptAction(artifact: MergedArtifact): Promise<ArtifactAction | null> {
-    return promptArtifactAction(artifact);
+        return artifact.description;
+      },
+      pageSize: 15,
+    });
   }
 
   private displayResults(groups: GroupedArtifacts): void {

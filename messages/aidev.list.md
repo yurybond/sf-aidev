@@ -9,7 +9,7 @@ Display a unified view of all agents, skills, prompts, and instruction files. Ar
 - Checked box (checked) - artifact exists locally
 - Unchecked box (unchecked) - artifact is available from source but not installed
 
-In interactive mode (TTY), use arrow keys to navigate, Enter to select, and Escape to exit. When an artifact is selected, an action menu appears with options to view details, install, or remove.
+In interactive mode (TTY), use arrow keys to navigate and Escape to exit. Press Enter on an artifact to toggle its inline description display - the description will be fetched from the source and shown in grey below the item.
 
 Merges artifacts found locally with those available from configured source repositories.
 
@@ -86,3 +86,7 @@ No source repository configured for this artifact.
 # warning.FailedToFetchDetails
 
 Could not fetch artifact details: %s
+
+# info.NoArtifacts
+
+No artifacts found. Add a source repository with 'sf aidev source add' to see available artifacts.

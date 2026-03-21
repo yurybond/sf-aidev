@@ -8,6 +8,7 @@ import * as readline from 'node:readline';
 import { select, checkbox, confirm, Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
 import type { ArtifactType } from '../types/manifest.js';
+import type { ExpandableItem } from './expandableSelect.js';
 
 /**
  * Square checkbox characters for consistent display.
@@ -138,6 +139,7 @@ const TYPE_LABELS: Record<ArtifactType | 'instruction', string> = {
   agent: 'Agents',
   skill: 'Skills',
   prompt: 'Prompts',
+  command: 'Commands',
   instruction: 'Instructions',
 };
 
@@ -149,7 +151,7 @@ const TYPE_LABELS: Record<ArtifactType | 'instruction', string> = {
  */
 export function toSelectChoices(groups: GroupedArtifacts): Array<{ name: string; value: MergedArtifact } | Separator> {
   const choices: Array<{ name: string; value: MergedArtifact } | Separator> = [];
-  const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'instructions'];
+  const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'commands', 'instructions'];
 
   for (const groupKey of typeOrder) {
     const group = groups[groupKey];
@@ -180,7 +182,7 @@ export function toSelectChoices(groups: GroupedArtifacts): Array<{ name: string;
  */
 export function toCheckboxChoices(
   artifacts: MergedArtifact[],
-  filter?: 'installed' | 'available',
+  filter?: 'installed' | 'available'
 ): Array<{ name: string; value: MergedArtifact }> {
   let filtered = artifacts;
 
@@ -206,10 +208,10 @@ export function toCheckboxChoices(
  */
 export function toGroupedCheckboxChoices(
   groups: GroupedArtifacts,
-  filter?: 'installed' | 'available',
+  filter?: 'installed' | 'available'
 ): Array<{ name: string; value: MergedArtifact } | Separator> {
   const choices: Array<{ name: string; value: MergedArtifact } | Separator> = [];
-  const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts'];
+  const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'commands'];
 
   for (const groupKey of typeOrder) {
     let group = groups[groupKey];
@@ -258,7 +260,7 @@ export async function promptArtifactList(groups: GroupedArtifacts, message: stri
         message: `${message} ${SELECT_HELP}`,
         choices,
         pageSize: 15,
-      }) as CancellablePromise<MergedArtifact>,
+      }) as CancellablePromise<MergedArtifact>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -292,7 +294,7 @@ export async function promptArtifactAction(artifact: MergedArtifact): Promise<Ar
       select<ArtifactAction>({
         message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}): ${ACTION_HELP}`,
         choices,
-      }) as CancellablePromise<ArtifactAction>,
+      }) as CancellablePromise<ArtifactAction>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -314,7 +316,7 @@ export async function promptArtifactAction(artifact: MergedArtifact): Promise<Ar
 export async function promptArtifactCheckbox(
   artifacts: MergedArtifact[],
   message: string,
-  filter?: 'installed' | 'available',
+  filter?: 'installed' | 'available'
 ): Promise<MergedArtifact[]> {
   const choices = toCheckboxChoices(artifacts, filter);
 
@@ -330,7 +332,7 @@ export async function promptArtifactCheckbox(
         choices,
         pageSize: 15,
         theme: CHECKBOX_THEME,
-      }) as CancellablePromise<MergedArtifact[]>,
+      }) as CancellablePromise<MergedArtifact[]>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -352,7 +354,7 @@ export async function promptArtifactCheckbox(
 export async function promptGroupedCheckbox(
   groups: GroupedArtifacts,
   message: string,
-  filter?: 'installed' | 'available',
+  filter?: 'installed' | 'available'
 ): Promise<MergedArtifact[]> {
   const choices = toGroupedCheckboxChoices(groups, filter);
 
@@ -368,7 +370,7 @@ export async function promptGroupedCheckbox(
         choices,
         pageSize: 15,
         theme: CHECKBOX_THEME,
-      }) as CancellablePromise<MergedArtifact[]>,
+      }) as CancellablePromise<MergedArtifact[]>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -393,7 +395,7 @@ export async function promptConfirm(message: string, defaultValue = false): Prom
       confirm({
         message,
         default: defaultValue,
-      }) as CancellablePromise<boolean>,
+      }) as CancellablePromise<boolean>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -428,7 +430,7 @@ export async function promptCheckboxGeneric<T>(config: {
         choices: config.choices,
         pageSize: config.pageSize ?? 15,
         theme: config.theme ?? CHECKBOX_THEME,
-      }) as CancellablePromise<T[]>,
+      }) as CancellablePromise<T[]>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -436,4 +438,34 @@ export async function promptCheckboxGeneric<T>(config: {
     }
     throw error;
   }
+}
+
+/**
+ * Convert grouped artifacts to expandable select choices.
+ * Used with the expandableSelect prompt for inline description display.
+ *
+ * @param groups - Grouped artifacts object.
+ * @returns Array of expandable choices with separators.
+ */
+export function toExpandableChoices(groups: GroupedArtifacts): ExpandableItem[] {
+  const choices: ExpandableItem[] = [];
+  const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'commands', 'instructions'];
+
+  for (const groupKey of typeOrder) {
+    const group = groups[groupKey];
+    if (group.length === 0) continue;
+
+    // Derive type label from group key (agents -> Agents, etc.)
+    const typeLabel = groupKey.charAt(0).toUpperCase() + groupKey.slice(1);
+    choices.push({ type: 'separator', separator: `--- ${typeLabel} ---` });
+
+    for (const artifact of group) {
+      choices.push({
+        name: artifact.name,
+        value: artifact,
+      });
+    }
+  }
+
+  return choices;
 }

@@ -25,6 +25,10 @@ const TOOL_PATHS: Record<ArtifactType, Record<string, string>> = {
     copilot: '.github/prompts',
     claude: '.claude/commands',
   },
+  command: {
+    copilot: '.github/commands',
+    claude: '.claude/commands',
+  },
 };
 
 /**

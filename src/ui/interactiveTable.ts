@@ -101,6 +101,14 @@ export class InteractiveTable {
       rows.push({ text: '', isHeader: false }); // blank line
     }
 
+    if (groups.commands.length > 0) {
+      rows.push({ text: this.formatHeader('Commands'), isHeader: true });
+      for (const artifact of groups.commands) {
+        rows.push({ text: this.formatRow(artifact), isHeader: false });
+      }
+      rows.push({ text: '', isHeader: false }); // blank line
+    }
+
     if (groups.instructions.length > 0) {
       rows.push({ text: this.formatHeader('Instructions'), isHeader: true });
       for (const artifact of groups.instructions) {
@@ -161,7 +169,13 @@ export class InteractiveTable {
    * @returns Total count.
    */
   public static getTotalCount(groups: GroupedArtifacts): number {
-    return groups.agents.length + groups.skills.length + groups.prompts.length + groups.instructions.length;
+    return (
+      groups.agents.length +
+      groups.skills.length +
+      groups.prompts.length +
+      groups.commands.length +
+      groups.instructions.length
+    );
   }
 
   /**
@@ -171,7 +185,13 @@ export class InteractiveTable {
    * @returns Object with installed and available counts.
    */
   public static getCounts(groups: GroupedArtifacts): { installed: number; available: number } {
-    const allArtifacts = [...groups.agents, ...groups.skills, ...groups.prompts, ...groups.instructions];
+    const allArtifacts = [
+      ...groups.agents,
+      ...groups.skills,
+      ...groups.prompts,
+      ...groups.commands,
+      ...groups.instructions,
+    ];
 
     const installed = allArtifacts.filter((a) => a.installed).length;
     const available = allArtifacts.filter((a) => !a.installed).length;
@@ -187,7 +207,7 @@ export class InteractiveTable {
    */
   public static toSelectChoices(groups: GroupedArtifacts): Array<{ name: string; value: MergedArtifact } | Separator> {
     const choices: Array<{ name: string; value: MergedArtifact } | Separator> = [];
-    const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'instructions'];
+    const typeOrder: Array<keyof GroupedArtifacts> = ['agents', 'skills', 'prompts', 'commands', 'instructions'];
 
     for (const groupKey of typeOrder) {
       const group = groups[groupKey];
