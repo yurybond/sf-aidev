@@ -6,11 +6,10 @@
 
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { confirm } from '@inquirer/prompts';
 import { ArtifactService } from '../../../services/artifactService.js';
 import { LocalFileScanner, type GroupedArtifacts, type MergedArtifact } from '../../../services/localFileScanner.js';
 import { AiDevConfig } from '../../../config/aiDevConfig.js';
-import { isInteractive, promptGroupedCheckbox } from '../../../ui/interactivePrompts.js';
+import { isInteractive, promptGroupedCheckbox, promptConfirm } from '../../../ui/interactivePrompts.js';
 import type { ArtifactType } from '../../../types/manifest.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -156,17 +155,7 @@ export default class Remove extends SfCommand<RemoveResult> {
    */
   // eslint-disable-next-line class-methods-use-this
   protected async confirmRemoval(count: number): Promise<boolean> {
-    try {
-      return await confirm({
-        message: messages.getMessage('prompt.Confirm', [count.toString()]),
-        default: false,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'ExitPromptError') {
-        return false;
-      }
-      throw error;
-    }
+    return promptConfirm(messages.getMessage('prompt.Confirm', [count.toString()]), false);
   }
 
   /**

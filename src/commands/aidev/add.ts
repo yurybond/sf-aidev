@@ -6,11 +6,11 @@
 
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages, SfError } from '@salesforce/core';
-import { checkbox, Separator } from '@inquirer/prompts';
+import { Separator } from '@inquirer/prompts';
 import { ArtifactService, type InstallResult, type AvailableArtifact } from '../../services/artifactService.js';
 import { AiDevConfig } from '../../config/aiDevConfig.js';
 import type { ArtifactType } from '../../types/manifest.js';
-import { CHECKBOX_THEME } from '../../ui/interactivePrompts.js';
+import { CHECKBOX_THEME, promptCheckboxGeneric } from '../../ui/interactivePrompts.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-aidev', 'aidev.add');
@@ -187,25 +187,17 @@ export default class Add extends SfCommand<AddResult> {
    */
   protected async promptCheckbox(
     message: string,
-    choices: Array<CheckboxChoice | Separator>
+    choices: Array<CheckboxChoice | Separator>,
   ): Promise<AvailableArtifact[]> {
     // Use this.spinner to satisfy class-methods-use-this rule
     // The spinner is already stopped before this method is called
     void this.spinner;
-    try {
-      return await checkbox<AvailableArtifact>({
-        message,
-        choices,
-        pageSize: 15,
-        theme: CHECKBOX_THEME,
-      });
-    } catch (error) {
-      // Handle user cancellation (Escape/Ctrl+C)
-      if (error instanceof Error && error.name === 'ExitPromptError') {
-        return [];
-      }
-      throw error;
-    }
+    return promptCheckboxGeneric<AvailableArtifact>({
+      message,
+      choices,
+      pageSize: 15,
+      theme: CHECKBOX_THEME,
+    });
   }
 
   /**

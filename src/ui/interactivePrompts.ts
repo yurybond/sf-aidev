@@ -4,7 +4,8 @@
  * Licensed under the BSD 3-Clause license.
  */
 
-import { select, checkbox, Separator } from '@inquirer/prompts';
+import * as readline from 'node:readline';
+import { select, checkbox, confirm, Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
 import type { ArtifactType } from '../types/manifest.js';
 
@@ -20,6 +21,42 @@ const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
 const SELECT_HELP = '(↑↓ navigate, Enter select, Esc exit)';
 const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, Enter confirm, Esc cancel)';
 const ACTION_HELP = '(↑↓ navigate, Enter select, Esc back)';
+
+/**
+ * Cancellable promise type returned by @inquirer/prompts.
+ */
+type CancellablePromise<T> = Promise<T> & { cancel: () => void };
+
+/**
+ * Wrap a cancellable prompt with Escape key handling.
+ *
+ * @inquirer/prompts doesn't handle Escape key natively - only Ctrl+C.
+ * This wrapper listens for Escape and calls the prompt's cancel() method.
+ */
+async function withEscapeHandling<T>(prompt: CancellablePromise<T>): Promise<T> {
+  // Set up raw mode to capture Escape key
+  if (process.stdin.isTTY) {
+    const onKeypress = (_chunk: string, key: readline.Key): void => {
+      if (key && key.name === 'escape') {
+        prompt.cancel();
+      }
+    };
+
+    // Enable keypress events
+    if (!process.stdin.listenerCount('keypress')) {
+      readline.emitKeypressEvents(process.stdin);
+    }
+    process.stdin.on('keypress', onKeypress);
+
+    try {
+      return await prompt;
+    } finally {
+      process.stdin.removeListener('keypress', onKeypress);
+    }
+  }
+
+  return prompt;
+}
 
 /**
  * Custom theme for @inquirer/checkbox prompt with square checkboxes.
@@ -55,15 +92,16 @@ export function isInteractive(): boolean {
 }
 
 /**
- * Check if an error is an ExitPromptError (user pressed Escape or Ctrl+C).
+ * Check if an error indicates user cancellation.
+ * - ExitPromptError: thrown when user presses Ctrl+C (SIGINT)
+ * - CancelPromptError: thrown when prompt.cancel() is called (e.g., on Escape)
  *
  * @param error - The error to check.
  * @returns True if the error indicates user cancellation.
  */
-function isExitPromptError(error: unknown): boolean {
+function isCancelledError(error: unknown): boolean {
   if (error instanceof Error) {
-    // @inquirer/prompts throws ExitPromptError when user presses Escape or Ctrl+C
-    return error.name === 'ExitPromptError';
+    return error.name === 'ExitPromptError' || error.name === 'CancelPromptError';
   }
   return false;
 }
@@ -214,13 +252,16 @@ export async function promptArtifactList(groups: GroupedArtifacts, message: stri
   }
 
   try {
-    return await select<MergedArtifact>({
-      message: `${message} ${SELECT_HELP}`,
-      choices,
-      pageSize: 15,
-    });
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      select<MergedArtifact>({
+        message: `${message} ${SELECT_HELP}`,
+        choices,
+        pageSize: 15,
+      }) as CancellablePromise<MergedArtifact>,
+    );
   } catch (error) {
-    if (isExitPromptError(error)) {
+    if (isCancelledError(error)) {
       return null;
     }
     throw error;
@@ -246,12 +287,15 @@ export async function promptArtifactAction(artifact: MergedArtifact): Promise<Ar
   choices.push({ name: 'Back to list', value: 'back' });
 
   try {
-    return await select<ArtifactAction>({
-      message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}): ${ACTION_HELP}`,
-      choices,
-    });
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      select<ArtifactAction>({
+        message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}): ${ACTION_HELP}`,
+        choices,
+      }) as CancellablePromise<ArtifactAction>,
+    );
   } catch (error) {
-    if (isExitPromptError(error)) {
+    if (isCancelledError(error)) {
       return null;
     }
     throw error;
@@ -279,14 +323,17 @@ export async function promptArtifactCheckbox(
   }
 
   try {
-    return await checkbox<MergedArtifact>({
-      message: `${message} ${CHECKBOX_HELP}`,
-      choices,
-      pageSize: 15,
-      theme: CHECKBOX_THEME,
-    });
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      checkbox<MergedArtifact>({
+        message: `${message} ${CHECKBOX_HELP}`,
+        choices,
+        pageSize: 15,
+        theme: CHECKBOX_THEME,
+      }) as CancellablePromise<MergedArtifact[]>,
+    );
   } catch (error) {
-    if (isExitPromptError(error)) {
+    if (isCancelledError(error)) {
       return [];
     }
     throw error;
@@ -314,14 +361,77 @@ export async function promptGroupedCheckbox(
   }
 
   try {
-    return await checkbox<MergedArtifact>({
-      message: `${message} ${CHECKBOX_HELP}`,
-      choices,
-      pageSize: 15,
-      theme: CHECKBOX_THEME,
-    });
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      checkbox<MergedArtifact>({
+        message: `${message} ${CHECKBOX_HELP}`,
+        choices,
+        pageSize: 15,
+        theme: CHECKBOX_THEME,
+      }) as CancellablePromise<MergedArtifact[]>,
+    );
   } catch (error) {
-    if (isExitPromptError(error)) {
+    if (isCancelledError(error)) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
+ * Prompt user for confirmation with Escape key support.
+ * Returns false if user cancels (Escape/Ctrl+C).
+ *
+ * @param message - The confirmation message to display.
+ * @param defaultValue - Default value (default: false).
+ * @returns True if confirmed, false otherwise.
+ */
+export async function promptConfirm(message: string, defaultValue = false): Promise<boolean> {
+  try {
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      confirm({
+        message,
+        default: defaultValue,
+      }) as CancellablePromise<boolean>,
+    );
+  } catch (error) {
+    if (isCancelledError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Generic checkbox prompt with Escape key support.
+ * Returns empty array if user cancels (Escape/Ctrl+C).
+ *
+ * @param config - Checkbox configuration (message, choices, pageSize, theme).
+ * @returns Array of selected values.
+ */
+export async function promptCheckboxGeneric<T>(config: {
+  message: string;
+  choices: Array<{ name: string; value: T } | Separator>;
+  pageSize?: number;
+  theme?: typeof CHECKBOX_THEME;
+}): Promise<T[]> {
+  if (config.choices.length === 0) {
+    return [];
+  }
+
+  try {
+    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
+    return await withEscapeHandling(
+      checkbox<T>({
+        message: config.message,
+        choices: config.choices,
+        pageSize: config.pageSize ?? 15,
+        theme: config.theme ?? CHECKBOX_THEME,
+      }) as CancellablePromise<T[]>,
+    );
+  } catch (error) {
+    if (isCancelledError(error)) {
       return [];
     }
     throw error;
