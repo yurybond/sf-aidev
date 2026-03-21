@@ -74,7 +74,7 @@ describe('aidev add prompt', () => {
 
       const result = await AddPrompt.run(['--name', 'my-prompt', '--source', 'owner/repo'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'prompt', source: 'owner/repo' });
     });
 
@@ -83,7 +83,7 @@ describe('aidev add prompt', () => {
 
       const result = await AddPrompt.run(['-n', 'my-prompt'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[0]).to.equal('my-prompt');
     });
 

@@ -74,7 +74,7 @@ describe('aidev add skill', () => {
 
       const result = await AddSkill.run(['--name', 'my-skill', '--source', 'owner/repo'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'skill', source: 'owner/repo' });
     });
 
@@ -83,7 +83,7 @@ describe('aidev add skill', () => {
 
       const result = await AddSkill.run(['-n', 'my-skill'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[0]).to.equal('my-skill');
     });
 

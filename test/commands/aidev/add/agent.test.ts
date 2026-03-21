@@ -74,7 +74,7 @@ describe('aidev add agent', () => {
 
       const result = await AddAgent.run(['--name', 'my-agent', '--source', 'owner/repo'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'agent', source: 'owner/repo' });
     });
 
@@ -83,7 +83,7 @@ describe('aidev add agent', () => {
 
       const result = await AddAgent.run(['-n', 'my-agent'], oclifConfig);
 
-      expect(result.success).to.be.true;
+      expect('success' in result && result.success).to.be.true;
       expect(installStub.firstCall.args[0]).to.equal('my-agent');
     });
 
