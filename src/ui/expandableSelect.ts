@@ -83,21 +83,21 @@ const expandableSelectTheme = {
 /**
  * Check if an item is a separator.
  */
-function isSeparator(item: ExpandableItem): item is ExpandableSeparator {
+export function isSeparator(item: ExpandableItem): item is ExpandableSeparator {
   return 'type' in item && item.type === 'separator';
 }
 
 /**
  * Check if an item is selectable (not a separator).
  */
-function isSelectable(item: ExpandableItem): item is ExpandableChoice {
+export function isSelectable(item: ExpandableItem): item is ExpandableChoice {
   return !isSeparator(item);
 }
 
 /**
  * Format artifact display name with installation status indicator.
  */
-function formatArtifactDisplay(artifact: MergedArtifact): string {
+export function formatArtifactDisplay(artifact: MergedArtifact): string {
   const statusIcon = artifact.installed ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED;
   return `${statusIcon} ${artifact.name}`;
 }
