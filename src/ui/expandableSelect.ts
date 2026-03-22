@@ -191,7 +191,7 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
   firstRender.current = false;
 
   // Build the rendered output
-  const helpTip = theme.style.help('(Arrow keys to navigate, Enter to toggle description, Escape to exit)');
+  const helpTip = theme.style.help('(↑↓ navigate, Enter toggle description, Esc exit)');
 
   // Render items with pagination
   const page = usePagination({
@@ -229,5 +229,5 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     loop: true,
   });
 
-  return `${config.message} ${helpTip}\n${page}`;
+  return `${config.message}\n${page}\n${helpTip}`;
 });
