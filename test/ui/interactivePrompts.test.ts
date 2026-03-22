@@ -238,6 +238,90 @@ describe('interactivePrompts', () => {
     });
   });
 
+  describe('formatArtifactDisplay', () => {
+    it('formats installed artifact with checked icon and description', () => {
+      const artifact: MergedArtifact = {
+        name: 'test-skill',
+        type: 'skill',
+        installed: true,
+        description: 'A test skill',
+      };
+
+      // We need to import the internal function for testing
+      // Since it's not exported, we test it indirectly through toSelectChoices
+      const groups: GroupedArtifacts = {
+        agents: [],
+        skills: [artifact],
+        prompts: [],
+        commands: [],
+        instructions: [],
+      };
+
+      const choices = toSelectChoices(groups);
+      const skillChoice = choices.find(
+        (c) => !(c instanceof Separator) && (c as { value: MergedArtifact }).value.name === 'test-skill'
+      ) as { name: string; value: MergedArtifact };
+
+      expect(skillChoice.name).to.include('\u2611'); // Checked icon
+      expect(skillChoice.name).to.include('test-skill');
+      expect(skillChoice.name).to.include('A test skill');
+    });
+
+    it('formats available artifact with unchecked icon', () => {
+      const artifact: MergedArtifact = {
+        name: 'test-agent',
+        type: 'agent',
+        installed: false,
+      };
+
+      const groups: GroupedArtifacts = {
+        agents: [artifact],
+        skills: [],
+        prompts: [],
+        commands: [],
+        instructions: [],
+      };
+
+      const choices = toSelectChoices(groups);
+      const agentChoice = choices.find(
+        (c) => !(c instanceof Separator) && (c as { value: MergedArtifact }).value.name === 'test-agent'
+      ) as { name: string; value: MergedArtifact };
+
+      expect(agentChoice.name).to.include('\u2610'); // Unchecked icon
+      expect(agentChoice.name).to.include('test-agent');
+    });
+  });
+
+  describe('formatArtifactName', () => {
+    it('formats artifact name with description for checkbox choices', () => {
+      const artifact: MergedArtifact = {
+        name: 'my-prompt',
+        type: 'prompt',
+        installed: false,
+        description: 'Test prompt description',
+      };
+
+      const choices = toCheckboxChoices([artifact]);
+
+      expect(choices[0].name).to.include('my-prompt');
+      expect(choices[0].name).to.include('Test prompt description');
+      expect(choices[0].name).to.not.include('\u2611'); // No checkbox icon
+      expect(choices[0].name).to.not.include('\u2610'); // No checkbox icon
+    });
+
+    it('formats artifact name without description when not provided', () => {
+      const artifact: MergedArtifact = {
+        name: 'simple-command',
+        type: 'command',
+        installed: true,
+      };
+
+      const choices = toCheckboxChoices([artifact]);
+
+      expect(choices[0].name).to.equal('simple-command');
+    });
+  });
+
   describe('toExpandableChoices', () => {
     it('converts grouped artifacts to expandable choices with separators', () => {
       const groups: GroupedArtifacts = {

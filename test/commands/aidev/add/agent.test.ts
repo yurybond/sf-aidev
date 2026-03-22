@@ -136,6 +136,222 @@ describe('aidev add agent', () => {
     });
   });
 
+  describe('interactive mode', () => {
+    let getActiveToolStub: sinon.SinonStub;
+    let listAvailableStub: sinon.SinonStub;
+    let isInstalledStub: sinon.SinonStub;
+    let promptCheckboxStub: sinon.SinonStub;
+    let originalStdinIsTTY: boolean | undefined;
+    let originalStdoutIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      // Mock interactive environment
+      originalStdinIsTTY = process.stdin.isTTY;
+      originalStdoutIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+
+      getActiveToolStub = sandbox.stub(ArtifactService.prototype, 'getActiveTool');
+      listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailable');
+      isInstalledStub = sandbox.stub(ArtifactService.prototype, 'isInstalled');
+      promptCheckboxStub = sandbox.stub(AddAgent.prototype, 'promptCheckbox' as keyof AddAgent);
+    });
+
+    afterEach(() => {
+      // Restore original TTY values
+      Object.defineProperty(process.stdin, 'isTTY', { value: originalStdinIsTTY, configurable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalStdoutIsTTY, configurable: true });
+    });
+
+    it('throws error when not in interactive mode and no name provided', async () => {
+      // Mock non-interactive environment by stubbing process.stdin.isTTY
+      const originalIsTTY = process.stdin.isTTY;
+      Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+
+      try {
+        const cmd = new AddAgent([], oclifConfig);
+        await cmd.run();
+        expect.fail('Should have thrown NonInteractiveError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).name).to.equal('NonInteractiveError');
+      } finally {
+        Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
+      }
+    });
+
+    it('throws error when no tool is configured in interactive mode', async () => {
+      getActiveToolStub.returns(null);
+
+      const cmd = new AddAgent([], oclifConfig);
+      try {
+        await cmd.run();
+        expect.fail('Should have thrown NoToolError');
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error);
+        expect((error as Error).name).to.equal('NoToolError');
+      }
+    });
+
+    it('returns empty result when no artifacts available', async () => {
+      getActiveToolStub.returns('copilot');
+      listAvailableStub.resolves([]);
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
+    });
+
+    it('returns empty result when all artifacts already installed', async () => {
+      getActiveToolStub.returns('copilot');
+      listAvailableStub.resolves([
+        { name: 'agent-1', type: 'agent', source: 'owner/repo', installed: true },
+        { name: 'agent-2', type: 'agent', source: 'owner/repo', installed: true },
+      ]);
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
+    });
+
+    it('returns empty result when user selects no artifacts', async () => {
+      getActiveToolStub.returns('copilot');
+      listAvailableStub.resolves([{ name: 'agent-1', type: 'agent', source: 'owner/repo', installed: false }]);
+      promptCheckboxStub.resolves([]);
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
+    });
+
+    it('installs selected agents successfully in interactive mode', async () => {
+      getActiveToolStub.returns('copilot');
+
+      const availableAgents = [
+        { name: 'agent-1', type: 'agent' as const, source: 'owner/repo', installed: false },
+        { name: 'agent-2', type: 'agent' as const, source: 'owner/repo', installed: false },
+      ];
+
+      listAvailableStub.resolves(availableAgents);
+      promptCheckboxStub.resolves(availableAgents);
+      isInstalledStub.returns(false);
+
+      installStub.onFirstCall().resolves({
+        success: true,
+        artifact: 'agent-1',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '.github/agents/agent-1.md',
+      });
+
+      installStub.onSecondCall().resolves({
+        success: true,
+        artifact: 'agent-2',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '.github/agents/agent-2.md',
+      });
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect('installed' in result).to.be.true;
+      if ('installed' in result) {
+        expect(result.installed).to.have.length(2);
+        expect(result.skipped).to.have.length(0);
+        expect(result.total).to.equal(2);
+      }
+      expect(installStub.callCount).to.equal(2);
+    });
+
+    it('skips already installed artifacts during batch install', async () => {
+      getActiveToolStub.returns('copilot');
+
+      const availableAgents = [
+        { name: 'agent-1', type: 'agent' as const, source: 'owner/repo', installed: false },
+        { name: 'agent-2', type: 'agent' as const, source: 'owner/repo', installed: false },
+      ];
+
+      listAvailableStub.resolves(availableAgents);
+      promptCheckboxStub.resolves(availableAgents);
+
+      // First artifact is already installed
+      isInstalledStub.onFirstCall().returns(true);
+      isInstalledStub.onSecondCall().returns(false);
+
+      installStub.resolves({
+        success: true,
+        artifact: 'agent-2',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '.github/agents/agent-2.md',
+      });
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect('installed' in result).to.be.true;
+      if ('installed' in result) {
+        expect(result.installed).to.have.length(1);
+        expect(result.skipped).to.have.length(1);
+        expect(result.skipped[0].name).to.equal('agent-1');
+        expect(result.total).to.equal(2);
+      }
+    });
+
+    it('reports failed installations separately', async () => {
+      getActiveToolStub.returns('copilot');
+
+      const availableAgents = [
+        { name: 'agent-1', type: 'agent' as const, source: 'owner/repo', installed: false },
+        { name: 'agent-2', type: 'agent' as const, source: 'owner/repo', installed: false },
+      ];
+
+      listAvailableStub.resolves(availableAgents);
+      promptCheckboxStub.resolves(availableAgents);
+      isInstalledStub.returns(false);
+
+      installStub.onFirstCall().resolves({
+        success: true,
+        artifact: 'agent-1',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '.github/agents/agent-1.md',
+      });
+
+      installStub.onSecondCall().resolves({
+        success: false,
+        artifact: 'agent-2',
+        type: 'agent',
+        tool: 'copilot',
+        installedPath: '',
+        error: 'Installation failed',
+      });
+
+      const result = await AddAgent.run([], oclifConfig);
+
+      expect('installed' in result).to.be.true;
+      if ('installed' in result) {
+        expect(result.installed).to.have.length(2);
+        expect(result.installed.filter((r: InstallResult) => r.success)).to.have.length(1);
+        expect(result.installed.filter((r: InstallResult) => !r.success)).to.have.length(1);
+        expect(result.skipped).to.have.length(0);
+        expect(result.total).to.equal(2);
+      }
+    });
+
+    it('respects source filter in interactive mode', async () => {
+      getActiveToolStub.returns('copilot');
+      listAvailableStub.resolves([]);
+
+      await AddAgent.run(['--source', 'specific/repo'], oclifConfig);
+
+      expect(listAvailableStub.calledOnce).to.be.true;
+      expect(listAvailableStub.firstCall.args[0]).to.deep.equal({
+        source: 'specific/repo',
+        type: 'agent',
+      });
+    });
+  });
+
   describe('command metadata', () => {
     it('has required static properties', () => {
       expect(AddAgent.summary).to.be.a('string').and.not.be.empty;

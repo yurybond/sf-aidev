@@ -137,6 +137,29 @@ describe('aidev list skills', () => {
     expect(result.skills).to.be.an('array');
   });
 
+  it('shows warnings for failed sources in non-JSON mode', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'failing/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [{ name: 'test-skill', type: 'skill', source: 'test/repo', installed: false }],
+      errors: [
+        { source: 'failing/repo', error: 'Network error' },
+        { source: 'another/repo', error: 'Timeout' },
+      ],
+      partialSuccess: true,
+    });
+
+    const result = await ListSkills.run([], oclifConfig);
+
+    // Command should complete successfully even with errors
+    expect(result.skills).to.be.an('array');
+    expect(result.skills.length).to.equal(1);
+  });
+
   it('sorts skills alphabetically', async () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],

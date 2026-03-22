@@ -7,37 +7,37 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { Config } from '@oclif/core';
-import AddSkill from '../../../../src/commands/aidev/add/skill.js';
+import AddCommand from '../../../../src/commands/aidev/add/command.js';
 import { ArtifactService } from '../../../../src/services/artifactService.js';
 import { AiDevConfig } from '../../../../src/config/aiDevConfig.js';
 import type { InstallResult } from '../../../../src/services/artifactService.js';
 
-describe('aidev add skill', () => {
+describe('aidev add command', () => {
   let sandbox: sinon.SinonSandbox;
   let installStub: sinon.SinonStub;
   let oclifConfig: Config;
 
   const successResult: InstallResult = {
     success: true,
-    artifact: 'my-skill',
-    type: 'skill',
+    artifact: 'my-command',
+    type: 'command',
     tool: 'copilot',
-    installedPath: '.github/copilot-skills/my-skill.md',
+    installedPath: '.github/commands/my-command.md',
   };
 
   const failResult: InstallResult = {
     success: false,
-    artifact: 'missing-skill',
-    type: 'skill',
+    artifact: 'missing-command',
+    type: 'command',
     tool: 'copilot',
     installedPath: '',
-    error: 'Artifact "missing-skill" not found in configured sources',
+    error: 'Artifact "missing-command" not found in configured sources',
   };
 
   const noToolResult: InstallResult = {
     success: false,
-    artifact: 'my-skill',
-    type: 'skill',
+    artifact: 'my-command',
+    type: 'command',
     tool: '',
     installedPath: '',
     error: 'No active tool configured. Run detect or set a tool first.',
@@ -58,62 +58,62 @@ describe('aidev add skill', () => {
   });
 
   describe('successful installation', () => {
-    it('installs a skill by name', async () => {
+    it('installs a command by name', async () => {
       installStub.resolves(successResult);
 
-      const result = await AddSkill.run(['--name', 'my-skill'], oclifConfig);
+      const result = await AddCommand.run(['--name', 'my-command'], oclifConfig);
 
       expect(result).to.deep.equal(successResult);
       expect(installStub.calledOnce).to.be.true;
-      expect(installStub.firstCall.args[0]).to.equal('my-skill');
-      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'skill', source: undefined });
+      expect(installStub.firstCall.args[0]).to.equal('my-command');
+      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'command', source: undefined });
     });
 
-    it('installs a skill with explicit source', async () => {
+    it('installs a command with explicit source', async () => {
       installStub.resolves({ ...successResult });
 
-      const result = await AddSkill.run(['--name', 'my-skill', '--source', 'owner/repo'], oclifConfig);
+      const result = await AddCommand.run(['--name', 'my-command', '--source', 'owner/repo'], oclifConfig);
 
       expect('success' in result && result.success).to.be.true;
-      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'skill', source: 'owner/repo' });
+      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'command', source: 'owner/repo' });
     });
 
-    it('installs a skill using short flag -n', async () => {
+    it('installs a command using short flag -n', async () => {
       installStub.resolves(successResult);
 
-      const result = await AddSkill.run(['-n', 'my-skill'], oclifConfig);
+      const result = await AddCommand.run(['-n', 'my-command'], oclifConfig);
 
       expect('success' in result && result.success).to.be.true;
-      expect(installStub.firstCall.args[0]).to.equal('my-skill');
+      expect(installStub.firstCall.args[0]).to.equal('my-command');
     });
 
-    it('installs a skill using short source flag -s', async () => {
+    it('installs a command using short source flag -s', async () => {
       installStub.resolves(successResult);
 
-      await AddSkill.run(['-n', 'my-skill', '-s', 'owner/repo'], oclifConfig);
+      await AddCommand.run(['-n', 'my-command', '-s', 'owner/repo'], oclifConfig);
 
-      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'skill', source: 'owner/repo' });
+      expect(installStub.firstCall.args[1]).to.deep.equal({ type: 'command', source: 'owner/repo' });
     });
   });
 
   describe('error handling', () => {
-    it('throws SfError when skill is not found', async () => {
+    it('throws SfError when command is not found', async () => {
       installStub.resolves(failResult);
 
-      const cmd = new AddSkill(['--name', 'missing-skill'], oclifConfig);
+      const cmd = new AddCommand(['--name', 'missing-command'], oclifConfig);
       try {
         await cmd.run();
         expect.fail('Should have thrown SfError');
       } catch (error) {
         expect(error).to.be.instanceOf(Error);
-        expect((error as Error).message).to.include('missing-skill');
+        expect((error as Error).message).to.include('missing-command');
       }
     });
 
     it('throws SfError when no tool is configured', async () => {
       installStub.resolves(noToolResult);
 
-      const cmd = new AddSkill(['--name', 'my-skill'], oclifConfig);
+      const cmd = new AddCommand(['--name', 'my-command'], oclifConfig);
       try {
         await cmd.run();
         expect.fail('Should have thrown SfError');
@@ -125,7 +125,7 @@ describe('aidev add skill', () => {
     it('throws SfError with generic message when error is undefined', async () => {
       installStub.resolves({ ...failResult, error: undefined });
 
-      const cmd = new AddSkill(['--name', 'my-skill'], oclifConfig);
+      const cmd = new AddCommand(['--name', 'my-command'], oclifConfig);
       try {
         await cmd.run();
         expect.fail('Should have thrown SfError');
@@ -154,7 +154,7 @@ describe('aidev add skill', () => {
       getActiveToolStub = sandbox.stub(ArtifactService.prototype, 'getActiveTool');
       listAvailableStub = sandbox.stub(ArtifactService.prototype, 'listAvailable');
       isInstalledStub = sandbox.stub(ArtifactService.prototype, 'isInstalled');
-      promptCheckboxStub = sandbox.stub(AddSkill.prototype, 'promptCheckbox' as keyof AddSkill);
+      promptCheckboxStub = sandbox.stub(AddCommand.prototype, 'promptCheckbox' as keyof AddCommand);
     });
 
     afterEach(() => {
@@ -169,7 +169,7 @@ describe('aidev add skill', () => {
       Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
 
       try {
-        const cmd = new AddSkill([], oclifConfig);
+        const cmd = new AddCommand([], oclifConfig);
         await cmd.run();
         expect.fail('Should have thrown NonInteractiveError');
       } catch (error) {
@@ -183,7 +183,7 @@ describe('aidev add skill', () => {
     it('throws error when no tool is configured in interactive mode', async () => {
       getActiveToolStub.returns(null);
 
-      const cmd = new AddSkill([], oclifConfig);
+      const cmd = new AddCommand([], oclifConfig);
       try {
         await cmd.run();
         expect.fail('Should have thrown NoToolError');
@@ -197,7 +197,7 @@ describe('aidev add skill', () => {
       getActiveToolStub.returns('copilot');
       listAvailableStub.resolves([]);
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
     });
@@ -205,54 +205,54 @@ describe('aidev add skill', () => {
     it('returns empty result when all artifacts already installed', async () => {
       getActiveToolStub.returns('copilot');
       listAvailableStub.resolves([
-        { name: 'skill-1', type: 'skill', source: 'owner/repo', installed: true },
-        { name: 'skill-2', type: 'skill', source: 'owner/repo', installed: true },
+        { name: 'command-1', type: 'command', source: 'owner/repo', installed: true },
+        { name: 'command-2', type: 'command', source: 'owner/repo', installed: true },
       ]);
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
     });
 
     it('returns empty result when user selects no artifacts', async () => {
       getActiveToolStub.returns('copilot');
-      listAvailableStub.resolves([{ name: 'skill-1', type: 'skill', source: 'owner/repo', installed: false }]);
+      listAvailableStub.resolves([{ name: 'command-1', type: 'command', source: 'owner/repo', installed: false }]);
       promptCheckboxStub.resolves([]);
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect(result).to.deep.equal({ installed: [], skipped: [], total: 0 });
     });
 
-    it('installs selected skills successfully in interactive mode', async () => {
+    it('installs selected commands successfully in interactive mode', async () => {
       getActiveToolStub.returns('copilot');
 
-      const availableSkills = [
-        { name: 'skill-1', type: 'skill' as const, source: 'owner/repo', installed: false },
-        { name: 'skill-2', type: 'skill' as const, source: 'owner/repo', installed: false },
+      const availableCommands = [
+        { name: 'command-1', type: 'command' as const, source: 'owner/repo', installed: false },
+        { name: 'command-2', type: 'command' as const, source: 'owner/repo', installed: false },
       ];
 
-      listAvailableStub.resolves(availableSkills);
-      promptCheckboxStub.resolves(availableSkills);
+      listAvailableStub.resolves(availableCommands);
+      promptCheckboxStub.resolves(availableCommands);
       isInstalledStub.returns(false);
 
       installStub.onFirstCall().resolves({
         success: true,
-        artifact: 'skill-1',
-        type: 'skill',
+        artifact: 'command-1',
+        type: 'command',
         tool: 'copilot',
-        installedPath: '.github/copilot-skills/skill-1.md',
+        installedPath: '.github/commands/command-1.md',
       });
 
       installStub.onSecondCall().resolves({
         success: true,
-        artifact: 'skill-2',
-        type: 'skill',
+        artifact: 'command-2',
+        type: 'command',
         tool: 'copilot',
-        installedPath: '.github/copilot-skills/skill-2.md',
+        installedPath: '.github/commands/command-2.md',
       });
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect('installed' in result).to.be.true;
       if ('installed' in result) {
@@ -266,13 +266,13 @@ describe('aidev add skill', () => {
     it('skips already installed artifacts during batch install', async () => {
       getActiveToolStub.returns('copilot');
 
-      const availableSkills = [
-        { name: 'skill-1', type: 'skill' as const, source: 'owner/repo', installed: false },
-        { name: 'skill-2', type: 'skill' as const, source: 'owner/repo', installed: false },
+      const availableCommands = [
+        { name: 'command-1', type: 'command' as const, source: 'owner/repo', installed: false },
+        { name: 'command-2', type: 'command' as const, source: 'owner/repo', installed: false },
       ];
 
-      listAvailableStub.resolves(availableSkills);
-      promptCheckboxStub.resolves(availableSkills);
+      listAvailableStub.resolves(availableCommands);
+      promptCheckboxStub.resolves(availableCommands);
 
       // First artifact is already installed
       isInstalledStub.onFirstCall().returns(true);
@@ -280,19 +280,19 @@ describe('aidev add skill', () => {
 
       installStub.resolves({
         success: true,
-        artifact: 'skill-2',
-        type: 'skill',
+        artifact: 'command-2',
+        type: 'command',
         tool: 'copilot',
-        installedPath: '.github/copilot-skills/skill-2.md',
+        installedPath: '.github/commands/command-2.md',
       });
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect('installed' in result).to.be.true;
       if ('installed' in result) {
         expect(result.installed).to.have.length(1);
         expect(result.skipped).to.have.length(1);
-        expect(result.skipped[0].name).to.equal('skill-1');
+        expect(result.skipped[0].name).to.equal('command-1');
         expect(result.total).to.equal(2);
       }
     });
@@ -300,33 +300,33 @@ describe('aidev add skill', () => {
     it('reports failed installations separately', async () => {
       getActiveToolStub.returns('copilot');
 
-      const availableSkills = [
-        { name: 'skill-1', type: 'skill' as const, source: 'owner/repo', installed: false },
-        { name: 'skill-2', type: 'skill' as const, source: 'owner/repo', installed: false },
+      const availableCommands = [
+        { name: 'command-1', type: 'command' as const, source: 'owner/repo', installed: false },
+        { name: 'command-2', type: 'command' as const, source: 'owner/repo', installed: false },
       ];
 
-      listAvailableStub.resolves(availableSkills);
-      promptCheckboxStub.resolves(availableSkills);
+      listAvailableStub.resolves(availableCommands);
+      promptCheckboxStub.resolves(availableCommands);
       isInstalledStub.returns(false);
 
       installStub.onFirstCall().resolves({
         success: true,
-        artifact: 'skill-1',
-        type: 'skill',
+        artifact: 'command-1',
+        type: 'command',
         tool: 'copilot',
-        installedPath: '.github/copilot-skills/skill-1.md',
+        installedPath: '.github/commands/command-1.md',
       });
 
       installStub.onSecondCall().resolves({
         success: false,
-        artifact: 'skill-2',
-        type: 'skill',
+        artifact: 'command-2',
+        type: 'command',
         tool: 'copilot',
         installedPath: '',
         error: 'Installation failed',
       });
 
-      const result = await AddSkill.run([], oclifConfig);
+      const result = await AddCommand.run([], oclifConfig);
 
       expect('installed' in result).to.be.true;
       if ('installed' in result) {
@@ -342,27 +342,27 @@ describe('aidev add skill', () => {
       getActiveToolStub.returns('copilot');
       listAvailableStub.resolves([]);
 
-      await AddSkill.run(['--source', 'specific/repo'], oclifConfig);
+      await AddCommand.run(['--source', 'specific/repo'], oclifConfig);
 
       expect(listAvailableStub.calledOnce).to.be.true;
       expect(listAvailableStub.firstCall.args[0]).to.deep.equal({
         source: 'specific/repo',
-        type: 'skill',
+        type: 'command',
       });
     });
   });
 
   describe('command metadata', () => {
     it('has required static properties', () => {
-      expect(AddSkill.summary).to.be.a('string').and.not.be.empty;
-      expect(AddSkill.description).to.be.a('string').and.not.be.empty;
-      expect(AddSkill.examples).to.be.an('array').and.have.length.greaterThan(0);
-      expect(AddSkill.enableJsonFlag).to.be.true;
+      expect(AddCommand.summary).to.be.a('string').and.not.be.empty;
+      expect(AddCommand.description).to.be.a('string').and.not.be.empty;
+      expect(AddCommand.examples).to.be.an('array').and.have.length.greaterThan(0);
+      expect(AddCommand.enableJsonFlag).to.be.true;
     });
 
     it('has correct flag definitions', () => {
-      expect(AddSkill.flags).to.have.property('name');
-      expect(AddSkill.flags).to.have.property('source');
+      expect(AddCommand.flags).to.have.property('name');
+      expect(AddCommand.flags).to.have.property('source');
     });
   });
 });
