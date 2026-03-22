@@ -12,14 +12,14 @@ import { ClaudeDetector } from './claudeDetector.js';
 /**
  * Result of a tool detection.
  */
-export interface DetectionResult {
+export type DetectionResult = {
   /** Internal tool name */
   toolName: string;
   /** Human-readable display name */
   displayName: string;
   /** Whether the tool was detected */
   detected: boolean;
-}
+};
 
 /**
  * Registry of all available AI tool detectors.

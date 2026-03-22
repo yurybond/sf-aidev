@@ -12,7 +12,7 @@ import type { Manifest } from '../types/manifest.js';
 /**
  * Cached manifest entry stored on disk.
  */
-export interface CachedManifestEntry {
+export type CachedManifestEntry = {
   /** The manifest data */
   manifest: Manifest;
   /** ISO timestamp when the manifest was cached */
@@ -21,7 +21,7 @@ export interface CachedManifestEntry {
   autoDiscovered: boolean;
   /** The repository identifier (owner/repo) */
   repo: string;
-}
+};
 
 /**
  * Disk cache for repository manifests.

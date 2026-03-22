@@ -19,43 +19,43 @@ import type { InstalledArtifact, SourceConfig } from '../types/config.js';
 /**
  * Result of listing available artifacts from a source
  */
-export interface AvailableArtifact {
+export type AvailableArtifact = {
   name: string;
   type: ArtifactType;
   description?: string;
   source: string;
   installed: boolean;
-}
+};
 
 /**
  * Result of an installation operation
  */
-export interface InstallResult {
+export type InstallResult = {
   success: boolean;
   artifact: string;
   type: ArtifactType;
   tool: string;
   installedPath: string;
   error?: string;
-}
+};
 
 /**
  * Options for listing artifacts
  */
-export interface ListOptions {
+export type ListOptions = {
   source?: string;
   type?: ArtifactType;
   tool?: string;
-}
+};
 
 /**
  * Result of listing available artifacts, including any errors encountered
  */
-export interface ListAvailableResult {
+export type ListAvailableResult = {
   artifacts: AvailableArtifact[];
   errors: Array<{ source: string; error: string }>;
   partialSuccess: boolean;
-}
+};
 
 /**
  * Service layer for artifact operations.
@@ -77,7 +77,7 @@ export class ArtifactService {
     sourceConfig: AiDevConfig,
     projectConfig: AiDevConfig,
     projectPath: string,
-    fetcher: typeof GitHubFetcher = GitHubFetcher,
+    fetcher: typeof GitHubFetcher = GitHubFetcher
   ) {
     this.sourceConfig = sourceConfig;
     this.projectConfig = projectConfig;
@@ -158,7 +158,7 @@ export class ArtifactService {
               description: artifact.description,
               source: source.repo,
               installed: installed.some(
-                (i) => i.name === artifact.name && i.type === artifact.type && i.source === source.repo,
+                (i) => i.name === artifact.name && i.type === artifact.type && i.source === source.repo
               ),
             }));
         } catch (error) {
@@ -166,7 +166,7 @@ export class ArtifactService {
           errors.push({ source: source.repo, error: errorMessage });
           return [];
         }
-      }),
+      })
     );
 
     const artifacts = perSource.flat();
@@ -180,7 +180,7 @@ export class ArtifactService {
    */
   public async install(
     artifactName: string,
-    options: { source?: string; type?: ArtifactType; tool?: string } = {},
+    options: { source?: string; type?: ArtifactType; tool?: string } = {}
   ): Promise<InstallResult> {
     const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
@@ -258,7 +258,7 @@ export class ArtifactService {
    */
   public async uninstall(
     artifactName: string,
-    options: { type?: ArtifactType; tool?: string } = {},
+    options: { type?: ArtifactType; tool?: string } = {}
   ): Promise<{ success: boolean; error?: string }> {
     const tool = options.tool ?? this.projectConfig.getTool();
     if (!tool) {
@@ -336,7 +336,7 @@ export class ArtifactService {
           exists = false;
         }
         return { artifact, exists };
-      }),
+      })
     );
   }
 
@@ -356,7 +356,7 @@ export class ArtifactService {
    */
   public async fetchArtifactContent(
     name: string,
-    options: { source?: string; type?: ArtifactType } = {},
+    options: { source?: string; type?: ArtifactType } = {}
   ): Promise<string | null> {
     const { artifact, source } = await this.findArtifact(name, options.source, options.type);
 
@@ -436,7 +436,7 @@ export class ArtifactService {
   private async findArtifact(
     name: string,
     sourceRepo?: string,
-    type?: ArtifactType,
+    type?: ArtifactType
   ): Promise<{ artifact?: Artifact; source?: SourceConfig }> {
     const sources = this.sourceConfig.getSources();
     const sourcesToSearch = sourceRepo ? sources.filter((s) => s.repo === sourceRepo) : sources;

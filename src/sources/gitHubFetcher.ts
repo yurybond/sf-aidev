@@ -12,24 +12,24 @@ import { Manifest } from '../types/manifest.js';
 /**
  * GitHub Trees API tree entry.
  */
-interface TreeEntry {
+type TreeEntry = {
   path: string;
   mode: string;
   type: 'blob' | 'tree';
   sha: string;
   size?: number;
   url: string;
-}
+};
 
 /**
  * GitHub Trees API response.
  */
-interface TreeResponse {
+type TreeResponse = {
   sha: string;
   url: string;
   tree: TreeEntry[];
   truncated: boolean;
-}
+};
 
 /**
  * Fetches files and manifests from GitHub repositories using raw.githubusercontent.com.
@@ -43,7 +43,7 @@ export class GitHubFetcher {
   /**
    * Request timeout in milliseconds.
    */
-  private static readonly TIMEOUT = 10000;
+  private static readonly TIMEOUT = 10_000;
 
   /**
    * Fetch and parse the manifest.json from a source repository.

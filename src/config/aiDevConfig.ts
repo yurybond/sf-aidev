@@ -41,7 +41,7 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
   public getSources(): SourceConfig[] {
     const sources = this.get('sources') as SourceConfig[] | undefined;
     // Return deep copy to avoid reference mutation issues across platforms
-    return sources ? sources.map((s) => ({ ...s })) : [];
+    return sources ? sources.map((source) => ({ ...source })) : [];
   }
 
   /**
@@ -56,21 +56,17 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
    * Add a source repository.
    */
   public addSource(source: SourceConfig): void {
-    const sources = this.getSources();
+    let sources = this.getSources();
 
     // If this is the default, unset others
     if (source.isDefault) {
-      sources.forEach((s) => {
-        s.isDefault = false;
-      });
+      sources = sources.map((s) => ({ ...s, isDefault: false }));
     }
 
     // If this is the first source, make it default
-    if (sources.length === 0) {
-      source.isDefault = true;
-    }
+    const sourceToAdd = sources.length === 0 ? { ...source, isDefault: true } : source;
 
-    sources.push(source);
+    sources.push(sourceToAdd);
     this.set('sources', sources);
   }
 
@@ -107,11 +103,9 @@ export class AiDevConfig extends ConfigFile<ConfigFile.Options> {
       return false;
     }
 
-    sources.forEach((s) => {
-      s.isDefault = s.repo === repo;
-    });
+    const updatedSources = sources.map((s) => ({ ...s, isDefault: s.repo === repo }));
 
-    this.set('sources', sources);
+    this.set('sources', updatedSources);
     return true;
   }
 

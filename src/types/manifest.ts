@@ -13,17 +13,17 @@ export type ArtifactType = 'skill' | 'agent' | 'prompt' | 'command';
 /**
  * Represents a file within an artifact.
  */
-export interface ArtifactFile {
+export type ArtifactFile = {
   /** Path to the file in the source repository */
   source: string;
   /** Optional override for the target filename */
   target?: string;
-}
+};
 
 /**
  * Represents an installable artifact (skill, agent, or prompt).
  */
-export interface Artifact {
+export type Artifact = {
   /** Unique name of the artifact */
   name: string;
   /** Type of artifact */
@@ -34,14 +34,14 @@ export interface Artifact {
   files: ArtifactFile[];
   /** AI tools this artifact supports (empty means all tools) */
   tools?: string[];
-}
+};
 
 /**
  * Manifest schema for a source repository.
  */
-export interface Manifest {
+export type Manifest = {
   /** Schema version */
   version: string;
   /** Available artifacts in this source */
   artifacts: Artifact[];
-}
+};

@@ -11,19 +11,19 @@ import { ArtifactType } from './manifest.js';
 /**
  * Configuration for a source repository.
  */
-export interface SourceConfig extends JsonMap {
+export type SourceConfig = JsonMap & {
   /** Repository in owner/repo format */
   repo: string;
   /** Whether this is the default source */
   isDefault?: boolean;
   /** ISO date string when the source was added */
   addedAt: string;
-}
+};
 
 /**
  * Represents an artifact that has been installed locally.
  */
-export interface InstalledArtifact extends JsonMap {
+export type InstalledArtifact = JsonMap & {
   /** Name of the installed artifact */
   name: string;
   /** Type of artifact */
@@ -34,16 +34,16 @@ export interface InstalledArtifact extends JsonMap {
   source: string;
   /** ISO date string when the artifact was installed */
   installedAt: string;
-}
+};
 
 /**
  * Schema for the sf-aidev configuration file (sf-aidev.json).
  */
-export interface AiDevConfigOptions extends JsonMap {
+export type AiDevConfigOptions = JsonMap & {
   /** Selected AI tool (e.g., 'copilot', 'claude') */
   tool?: string;
   /** Configured source repositories */
   sources: SourceConfig[];
   /** Artifacts installed in the current project */
   installedArtifacts: InstalledArtifact[];
-}
+};

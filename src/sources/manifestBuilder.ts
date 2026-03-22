@@ -9,54 +9,54 @@ import type { Artifact, ArtifactType, Manifest } from '../types/manifest.js';
 /**
  * Discovery rule for mapping file paths to artifacts.
  */
-interface DiscoveryRule {
+type DiscoveryRule = {
   /** Regex pattern to match file paths */
   pattern: RegExp;
   /** Artifact type to assign */
   type: ArtifactType;
   /** Optional tool this artifact is specific to */
   tool?: string;
-}
+};
 
 /**
  * Skill directory rule for matching files inside skill directories.
  */
-interface SkillDirectoryRule {
+type SkillDirectoryRule = {
   /** Regex pattern to match files inside skill directories (captures dirName and fileName) */
   pattern: RegExp;
   /** Optional tool this skill is specific to */
   tool?: string;
-}
+};
 
 /**
  * Command directory rule for matching files inside command directories.
  */
-interface CommandDirectoryRule {
+type CommandDirectoryRule = {
   /** Regex pattern to match files inside command directories (captures dirName and fileName) */
   pattern: RegExp;
   /** Optional tool this command is specific to */
   tool?: string;
-}
+};
 
 /**
  * Information about a discovered skill directory.
  */
-interface SkillDirInfo {
+type SkillDirInfo = {
   /** Files belonging to this skill */
   files: string[];
   /** Tool this skill is specific to (if any) */
   tool?: string;
-}
+};
 
 /**
  * Information about a discovered command directory.
  */
-interface CommandDirInfo {
+type CommandDirInfo = {
   /** Files belonging to this command */
   files: string[];
   /** Tool this command is specific to (if any) */
   tool?: string;
-}
+};
 
 /**
  * Builds a Manifest from a list of file paths by discovering artifacts

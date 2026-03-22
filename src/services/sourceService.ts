@@ -16,25 +16,25 @@ import type { SourceConfig } from '../types/config.js';
 /**
  * Health check result for a source
  */
-export interface SourceHealth {
+export type SourceHealth = {
   repo: string;
   healthy: boolean;
   artifactCount?: number;
   error?: string;
   lastChecked: string;
-}
+};
 
 /**
  * Result of adding a source
  */
-export interface AddSourceResult {
+export type AddSourceResult = {
   success: boolean;
   source?: SourceConfig;
   manifest?: Manifest;
   error?: string;
   /** Indicates the manifest was auto-generated from discovered artifacts */
   autoDiscovered?: boolean;
-}
+};
 
 /**
  * Service layer for source repository operations.

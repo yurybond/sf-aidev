@@ -12,11 +12,11 @@ import { AiDevConfig } from '../../../config/aiDevConfig.js';
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-aidev', 'aidev.remove.prompt');
 
-export interface RemovePromptResult {
+export type RemovePromptResult = {
   success: boolean;
   name: string;
   error?: string;
-}
+};
 
 export default class RemovePrompt extends SfCommand<RemovePromptResult> {
   public static readonly summary = messages.getMessage('summary');
