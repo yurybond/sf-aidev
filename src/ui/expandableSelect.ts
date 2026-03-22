@@ -136,6 +136,10 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
 
   // Handle keypress events
   useKeypress((key: KeypressEvent) => {
+    // Debug: log all keypresses
+    // eslint-disable-next-line no-console
+    console.log(`[DEBUG] Key pressed: ${key.name}, active: ${active}`);
+
     if (key.name === 'escape') {
       // Exit the prompt
       done();
@@ -175,15 +179,24 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     }
 
     if (isUpKey(key) || isDownKey(key)) {
+      // Debug: log arrow key handling
+      // eslint-disable-next-line no-console
+      console.log(`[DEBUG] Arrow key detected: ${isUpKey(key) ? 'UP' : 'DOWN'}, current active: ${active}`);
+
       const offset = isUpKey(key) ? -1 : 1;
       let next = active;
       do {
         next = (next + offset + items.length) % items.length;
       } while (!isSelectable(items[next]) && next !== active);
 
+      // eslint-disable-next-line no-console
+      console.log(`[DEBUG] Calculated next: ${next}, will update: ${isSelectable(items[next])}`);
+
       // Only update if we found a valid selectable item
       if (isSelectable(items[next])) {
         setActive(next);
+        // eslint-disable-next-line no-console
+        console.log(`[DEBUG] Called setActive(${next})`);
       }
     }
   });
