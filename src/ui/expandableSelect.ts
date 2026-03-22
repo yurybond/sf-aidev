@@ -190,8 +190,8 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
 
   firstRender.current = false;
 
-  // Build the rendered output
-  const helpTip = theme.style.help('(↑↓ navigate, Enter toggle description, Esc exit)');
+  // Build the rendered output with keys in white and text in grey
+  const helpTip = `(${RESET}↑↓${GREY} navigate • ${RESET}⏎${GREY} toggle • ${RESET}Esc${GREY} exit${RESET})`;
 
   // Render items with pagination
   const page = usePagination({
