@@ -39,7 +39,8 @@
     "sf",
     "sf-plugin",
     "sfdx",
-    "sfdx-plugin"
+    "sfdx-plugin",
+    "oclif-plugin"
   ],
   "license": "BSD-3-Clause",
   "oclif": {
