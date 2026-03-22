@@ -17,7 +17,6 @@ import {
   isDownKey,
   type KeypressEvent,
 } from '@inquirer/core';
-import type { InquirerReadline } from '@inquirer/type';
 import type { MergedArtifact } from '../services/localFileScanner.js';
 
 /**
@@ -136,7 +135,7 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
   }
 
   // Handle keypress events
-  useKeypress(async (key: KeypressEvent, rl: InquirerReadline) => {
+  useKeypress((key: KeypressEvent) => {
     if (key.name === 'escape') {
       // Exit the prompt
       done();
@@ -156,14 +155,19 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
           // Check if we need to fetch the description
           if (!descriptions.has(active)) {
             setLoadingIndex(active);
-            try {
-              const description = await config.onFetchDescription(currentItem.value);
-              const newDescriptions = new Map(descriptions);
-              newDescriptions.set(active, description);
-              setDescriptions(newDescriptions);
-            } finally {
-              setLoadingIndex(null);
-            }
+            config
+              .onFetchDescription(currentItem.value)
+              .then((description) => {
+                const newDescriptions = new Map(descriptions);
+                newDescriptions.set(active, description);
+                setDescriptions(newDescriptions);
+              })
+              .catch(() => {
+                // Silently handle errors
+              })
+              .finally(() => {
+                setLoadingIndex(null);
+              });
           }
         }
       }
@@ -171,8 +175,6 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     }
 
     if (isUpKey(key) || isDownKey(key)) {
-      rl.clearLine(0);
-
       const offset = isUpKey(key) ? -1 : 1;
       let next = active;
       do {
