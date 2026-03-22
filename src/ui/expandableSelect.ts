@@ -107,7 +107,7 @@ export function formatArtifactDisplay(artifact: MergedArtifact): string {
  *
  * Features:
  * - Enter toggles inline description display for the selected item
- * - Arrow keys navigate and collapse any expanded item
+ * - Arrow keys navigate between items (expanded descriptions remain visible)
  * - Escape exits the prompt
  */
 export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((config, done) => {
@@ -172,10 +172,6 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
 
     if (isUpKey(key) || isDownKey(key)) {
       rl.clearLine(0);
-      // Collapse any expanded item when navigating
-      if (expandedIndex !== null) {
-        setExpandedIndex(null);
-      }
 
       const offset = isUpKey(key) ? -1 : 1;
       let next = active;
