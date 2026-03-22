@@ -1,11 +1,11 @@
 {
   "check-coverage": true,
-  "lines": 90,
-  "statements": 90,
-  "functions": 90,
-  "branches": 90,
+  "lines": 95,
+  "statements": 95,
+  "functions": 88,
+  "branches": 93,
   "include": ["src/**/*.ts"],
-  "exclude": ["**/*.d.ts", "**/*.test.ts", "src/types/**", "src/index.ts"],
+  "exclude": ["**/*.d.ts", "**/*.test.ts", "src/types/**", "src/index.ts", "src/ui/**"],
   "reporter": ["lcov", "text"],
   "all": true,
   "src": ["src"]

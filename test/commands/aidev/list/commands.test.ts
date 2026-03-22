@@ -775,4 +775,55 @@ describe('aidev list commands', () => {
       });
     }
   });
+
+  it('handles interactive mode with view action to display details', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [
+          { name: 'test-command', type: 'command', source: 'test/repo', installed: false, description: 'Test' },
+        ],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
+      promptSelectStub
+        .onFirstCall()
+        .resolves({ name: 'test-command', type: 'command', source: 'test/repo', installed: false });
+      promptSelectStub.onSecondCall().resolves(null);
+
+      const promptActionStub = sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands);
+      promptActionStub.resolves('view');
+
+      const displayDetailsStub = sandbox.stub(ListCommands.prototype, 'displayArtifactDetails' as keyof ListCommands);
+      displayDetailsStub.resolves();
+
+      await ListCommands.run([], oclifConfig);
+
+      expect(displayDetailsStub.calledOnce).to.be.true;
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });

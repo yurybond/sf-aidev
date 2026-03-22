@@ -337,4 +337,392 @@ describe('aidev list skills', () => {
       });
     }
   });
+
+  it('handles interactive mode with view action to display details', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'test-skill', type: 'skill', source: 'test/repo', installed: false, description: 'Test' }],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptSelectStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptSelectStub
+        .onFirstCall()
+        .resolves({ name: 'test-skill', type: 'skill', source: 'test/repo', installed: false });
+      promptSelectStub.onSecondCall().resolves(null);
+
+      const promptActionStub = sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills);
+      promptActionStub.resolves('view');
+
+      const displayDetailsStub = sandbox.stub(ListSkills.prototype, 'displayArtifactDetails' as keyof ListSkills);
+      displayDetailsStub.resolves();
+
+      await ListSkills.run([], oclifConfig);
+
+      expect(displayDetailsStub.calledOnce).to.be.true;
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles failed install action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'skill1', type: 'skill', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub.onFirstCall().resolves({ name: 'skill1', type: 'skill', source: 'test/repo', installed: false });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('install');
+
+      sandbox.stub(ArtifactService.prototype, 'install').resolves({
+        success: false,
+        artifact: 'skill1',
+        type: 'skill',
+        tool: 'copilot',
+        installedPath: '',
+        error: 'Installation failed',
+      });
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles failed remove action', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanSkills')
+        .resolves([{ name: 'skill1', type: 'skill', installed: true, path: '/path/skill1.md' }]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub.onFirstCall().resolves({ name: 'skill1', type: 'skill', installed: true });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('remove');
+
+      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({ success: false, error: 'Removal failed' });
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles failed install with undefined error message', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'skill1', type: 'skill', source: 'test/repo', installed: false }],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub.onFirstCall().resolves({ name: 'skill1', type: 'skill', source: 'test/repo', installed: false });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('install');
+
+      sandbox.stub(ArtifactService.prototype, 'install').resolves({
+        success: false,
+        artifact: 'skill1',
+        type: 'skill',
+        tool: 'copilot',
+        installedPath: '',
+      });
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles failed remove with undefined error message', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanSkills')
+        .resolves([{ name: 'skill1', type: 'skill', installed: true, path: '/path/skill1.md' }]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub.onFirstCall().resolves({ name: 'skill1', type: 'skill', installed: true });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('remove');
+
+      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({ success: false });
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('displays artifact details without source', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanSkills')
+        .resolves([{ name: 'local-skill', type: 'skill', installed: true, path: '/path/skill.md' }]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub.onFirstCall().resolves({ name: 'local-skill', type: 'skill', installed: true });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('view');
+
+      const displayStub = sandbox.stub(ListSkills.prototype, 'displayArtifactDetails' as keyof ListSkills);
+      displayStub.resolves();
+
+      await ListSkills.run([], oclifConfig);
+
+      expect(displayStub.calledOnce).to.be.true;
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles displayArtifactDetails fetch error', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [
+          { name: 'skill1', type: 'skill', source: 'test/repo', installed: false, description: 'Test skill' },
+        ],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub
+        .onFirstCall()
+        .resolves({ name: 'skill1', type: 'skill', source: 'test/repo', installed: false, description: 'Test skill' });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('view');
+
+      sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent').rejects(new Error('Network error'));
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles displayArtifactDetails with null content', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);
+      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+        artifacts: [{ name: 'skill1', type: 'skill', source: 'test/repo', installed: false, description: 'Test' }],
+        errors: [],
+        partialSuccess: false,
+      });
+
+      const promptStub = sandbox.stub(ListSkills.prototype, 'promptSelect' as keyof ListSkills);
+      promptStub
+        .onFirstCall()
+        .resolves({ name: 'skill1', type: 'skill', source: 'test/repo', installed: false, description: 'Test' });
+      promptStub.onSecondCall().resolves(null);
+
+      sandbox.stub(ListSkills.prototype, 'promptAction' as keyof ListSkills).resolves('view');
+
+      sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent').resolves(null);
+
+      await ListSkills.run([], oclifConfig);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles empty choices in promptSelect', async () => {
+    const cmd = new ListSkills([], oclifConfig);
+
+    const result = await (
+      cmd as unknown as { promptSelect: (choices: unknown[], message: string) => Promise<unknown> }
+    ).promptSelect([], 'Select a skill');
+
+    expect(result).to.be.null;
+  });
 });

@@ -272,4 +272,101 @@ describe('aidev remove (parent)', () => {
       });
     }
   });
+
+  it('skips instruction artifacts during removal', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [],
+        getInstalledArtifacts: () => [],
+        getTool: () => 'copilot',
+      } as unknown as AiDevConfig);
+      sandbox
+        .stub(LocalFileScanner, 'scanAll')
+        .resolves([{ name: 'skill1', type: 'skill', installed: true, path: '/path/skill1.md' }]);
+      sandbox
+        .stub(Remove.prototype, 'promptCheckbox' as keyof Remove)
+        .resolves([{ name: 'CLAUDE.md', type: 'instruction', installed: true }]);
+      sandbox.stub(Remove.prototype, 'confirmRemoval' as keyof Remove).resolves(true);
+
+      const uninstallStub = sandbox.stub(ArtifactService.prototype, 'uninstall');
+
+      const result = await Remove.run([], oclifConfig);
+
+      // Instructions should be skipped, so uninstall should not be called
+      expect(uninstallStub.called).to.be.false;
+      expect(result.removed.length).to.equal(0);
+      expect(result.failed.length).to.equal(0);
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it('handles mixed success and failure results', async () => {
+    const originalStdinTTY = process.stdin.isTTY;
+    const originalStdoutTTY = process.stdout.isTTY;
+
+    try {
+      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
+      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+
+      sandbox.stub(AiDevConfig, 'create').resolves({
+        getSources: () => [],
+        getInstalledArtifacts: () => [
+          { name: 'skill1', type: 'skill', path: '/path/skill1.md', source: 'test/repo', installedAt: '' },
+          { name: 'skill2', type: 'skill', path: '/path/skill2.md', source: 'test/repo', installedAt: '' },
+        ],
+        getTool: () => 'copilot',
+        removeInstalledArtifact: sandbox.stub(),
+        write: sandbox.stub().resolves(),
+      } as unknown as AiDevConfig);
+      sandbox.stub(LocalFileScanner, 'scanAll').resolves([
+        { name: 'skill1', type: 'skill', installed: true, path: '/path/skill1.md' },
+        { name: 'skill2', type: 'skill', installed: true, path: '/path/skill2.md' },
+      ]);
+      sandbox.stub(Remove.prototype, 'promptCheckbox' as keyof Remove).resolves([
+        { name: 'skill1', type: 'skill', installed: true },
+        { name: 'skill2', type: 'skill', installed: true },
+      ]);
+      sandbox.stub(Remove.prototype, 'confirmRemoval' as keyof Remove).resolves(true);
+
+      const uninstallStub = sandbox.stub(ArtifactService.prototype, 'uninstall');
+      uninstallStub.onFirstCall().resolves({ success: true });
+      uninstallStub.onSecondCall().resolves({ success: false, error: 'Permission denied' });
+
+      const result = await Remove.run([], oclifConfig);
+
+      expect(result.removed.length).to.equal(1);
+      expect(result.failed.length).to.equal(1);
+      expect(result.total).to.equal(2);
+      expect(result.removed[0].name).to.equal('skill1');
+      expect(result.failed[0].name).to.equal('skill2');
+      expect(result.failed[0].error).to.equal('Permission denied');
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: originalStdinTTY,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutTTY,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
