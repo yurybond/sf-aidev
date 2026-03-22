@@ -64,7 +64,7 @@
     "lint": "wireit",
     "postinstall": "husky install || true",
     "postpack": "sf-clean --ignore-signing-artifacts",
-    "prepack": "sf-prepack",
+    "prepack": "yarn clean && sf-prepack",
     "test": "wireit",
     "test:nuts": "node -e \"const g=require('glob');if(g.sync('**/*.nut.ts').length)process.exit(1)\" || c8 mocha \"**/*.nut.ts\" --slow 4500 --timeout 600000 --parallel",
     "test:only": "wireit",
