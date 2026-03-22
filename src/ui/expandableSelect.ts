@@ -114,32 +114,24 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
   const theme = makeTheme(expandableSelectTheme, {});
   const firstRender = useRef(true);
 
-  // State management
-  const [active, setActive] = useState(0);
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
-  const [descriptions, setDescriptions] = useState<Map<number, string | undefined>>(new Map());
-
   // Normalize and memoize items
   const items = useMemo(() => config.choices, [config.choices]);
 
-  // Initialize active to first selectable item
+  // Calculate initial active index (first selectable item)
   const initialActive = useMemo(() => {
     const first = items.findIndex(isSelectable);
     return first >= 0 ? first : 0;
   }, [items]);
 
-  // Set initial active on first render
-  if (firstRender.current && active !== initialActive) {
-    setActive(initialActive);
-  }
+  // State management - initialize active to first selectable item
+  const [active, setActive] = useState(initialActive);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
+  const [descriptions, setDescriptions] = useState<Map<number, string | undefined>>(new Map());
 
   // Handle keypress events
-  useKeypress((key: KeypressEvent) => {
-    // Debug: log all keypresses
-    // eslint-disable-next-line no-console
-    console.log(`[DEBUG] Key pressed: ${key.name}, active: ${active}`);
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useKeypress((key: KeypressEvent, rl: any) => {
     if (key.name === 'escape') {
       // Exit the prompt
       done();
@@ -179,9 +171,9 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     }
 
     if (isUpKey(key) || isDownKey(key)) {
-      // Debug: log arrow key handling
-      // eslint-disable-next-line no-console
-      console.log(`[DEBUG] Arrow key detected: ${isUpKey(key) ? 'UP' : 'DOWN'}, current active: ${active}`);
+      // Clear the current line to prepare for re-render
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      rl.clearLine(0);
 
       const offset = isUpKey(key) ? -1 : 1;
       let next = active;
@@ -189,14 +181,9 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
         next = (next + offset + items.length) % items.length;
       } while (!isSelectable(items[next]) && next !== active);
 
-      // eslint-disable-next-line no-console
-      console.log(`[DEBUG] Calculated next: ${next}, will update: ${isSelectable(items[next])}`);
-
-      // Only update if we found a valid selectable item
-      if (isSelectable(items[next])) {
+      // Only update if we found a valid selectable item AND it's different
+      if (isSelectable(items[next]) && next !== active) {
         setActive(next);
-        // eslint-disable-next-line no-console
-        console.log(`[DEBUG] Called setActive(${next})`);
       }
     }
   });
