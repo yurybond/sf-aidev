@@ -4,15 +4,10 @@
  * Licensed under the BSD 3-Clause license.
  */
 
-import { select } from '@inquirer/prompts';
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
+import { Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import { ArtifactService } from '../../../services/artifactService.js';
-import { LocalFileScanner, type MergedArtifact } from '../../../services/localFileScanner.js';
-import { AiDevConfig } from '../../../config/aiDevConfig.js';
-import { InteractiveTable } from '../../../ui/interactiveTable.js';
-import { FrontmatterParser } from '../../../utils/frontmatterParser.js';
-import { isInteractive, promptArtifactAction, type ArtifactAction } from '../../../ui/interactivePrompts.js';
+import { LocalFileScanner, type MergedArtifact, type ScannedArtifact } from '../../../services/localFileScanner.js';
+import { BaseTypedListCommand } from './baseTypedListCommand.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-aidev', 'aidev.list.commands');
@@ -26,12 +21,14 @@ export type ListCommandsResult = {
   };
 };
 
-export default class ListCommands extends SfCommand<ListCommandsResult> {
+// eslint-disable-next-line sf-plugin/only-extend-SfCommand
+export default class ListCommands extends BaseTypedListCommand<ListCommandsResult> {
   public static readonly summary = messages.getMessage('summary');
   public static readonly description = messages.getMessage('description');
   public static readonly examples = messages.getMessages('examples');
   public static readonly enableJsonFlag = true;
 
+  // eslint-disable-next-line sf-plugin/spread-base-flags
   public static readonly flags = {
     source: Flags.string({
       char: 's',
@@ -41,43 +38,26 @@ export default class ListCommands extends SfCommand<ListCommandsResult> {
 
   public async run(): Promise<ListCommandsResult> {
     const { flags } = await this.parse(ListCommands);
+    return this.runList(flags.source);
+  }
 
-    const globalConfig = await AiDevConfig.create({ isGlobal: true });
-    const localConfig = await AiDevConfig.create({ isGlobal: false });
-    const projectPath = process.cwd();
+  // eslint-disable-next-line class-methods-use-this
+  protected getArtifactType(): 'command' {
+    return 'command';
+  }
 
-    // Scan local commands
-    const localCommands = await LocalFileScanner.scanCommands(projectPath);
+  // eslint-disable-next-line class-methods-use-this
+  protected getSectionTitle(): string {
+    return 'Commands';
+  }
 
-    // Fetch available commands from sources with error tracking
-    const service = new ArtifactService(globalConfig, localConfig, projectPath);
-    const { artifacts: availableArtifacts, errors } = await service.listAvailableWithErrors({
-      source: flags.source,
-      type: 'command',
-    });
+  // eslint-disable-next-line class-methods-use-this
+  protected async scanLocal(projectPath: string): Promise<ScannedArtifact[]> {
+    return LocalFileScanner.scanCommands(projectPath);
+  }
 
-    // Show warnings for failed sources
-    if (errors.length > 0 && !this.jsonEnabled()) {
-      for (const { source, error } of errors) {
-        this.warn(messages.getMessage('warning.SourceFailed', [source, error]));
-      }
-    }
-
-    // Merge local with manifest artifacts
-    const merged = LocalFileScanner.mergeArtifacts(localCommands, availableArtifacts);
-
-    // Sort alphabetically
-    merged.sort((a, b) => a.name.localeCompare(b.name));
-
-    // Display results
-    if (!this.jsonEnabled()) {
-      if (isInteractive()) {
-        await this.runInteractive(merged, service);
-      } else {
-        InteractiveTable.renderSection(merged, 'Commands', (msg) => this.log(msg));
-      }
-    }
-
+  // eslint-disable-next-line class-methods-use-this
+  protected buildResult(merged: MergedArtifact[]): ListCommandsResult {
     const installed = merged.filter((a) => a.installed).length;
     const available = merged.filter((a) => !a.installed).length;
 
@@ -91,176 +71,8 @@ export default class ListCommands extends SfCommand<ListCommandsResult> {
     };
   }
 
-  /**
-   * Run interactive list with action sub-menu.
-   */
-  protected async runInteractive(commands: MergedArtifact[], service: ArtifactService): Promise<void> {
-    if (commands.length === 0) {
-      this.log(messages.getMessage('info.NoCommands'));
-      return;
-    }
-
-    let continueLoop = true;
-
-    while (continueLoop) {
-      // eslint-disable-next-line no-await-in-loop
-      const selected = await this.promptSelect(commands, messages.getMessage('prompt.Select'));
-
-      if (!selected) {
-        // User cancelled (Escape/Ctrl+C)
-        continueLoop = false;
-        break;
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      const action = await this.promptAction(selected);
-
-      if (!action || action === 'back') {
-        continue;
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      await this.executeAction(action, selected, service, commands);
-    }
-  }
-
-  /**
-   * Execute the selected action on an artifact.
-   */
-  protected async executeAction(
-    action: ArtifactAction,
-    artifact: MergedArtifact,
-    service: ArtifactService,
-    commands: MergedArtifact[]
-  ): Promise<void> {
-    switch (action) {
-      case 'view':
-        await this.displayArtifactDetails(artifact, service);
-        break;
-
-      case 'install':
-        this.spinner.start(messages.getMessage('info.Installing', [artifact.name]));
-        // eslint-disable-next-line no-case-declarations
-        const installResult = await service.install(artifact.name, {
-          type: 'command',
-          source: artifact.source,
-        });
-        this.spinner.stop();
-
-        if (installResult.success) {
-          this.log(messages.getMessage('info.Installed', [artifact.name, installResult.installedPath]));
-          this.updateArtifactStatus(commands, artifact, true);
-        } else {
-          this.warn(messages.getMessage('warning.InstallFailed', [artifact.name, installResult.error ?? 'Unknown']));
-        }
-        break;
-
-      case 'remove':
-        this.spinner.start(messages.getMessage('info.Removing', [artifact.name]));
-        // eslint-disable-next-line no-case-declarations
-        const removeResult = await service.uninstall(artifact.name, { type: 'command' });
-        this.spinner.stop();
-
-        if (removeResult.success) {
-          this.log(messages.getMessage('info.Removed', [artifact.name]));
-          this.updateArtifactStatus(commands, artifact, false);
-        } else {
-          this.warn(messages.getMessage('warning.RemoveFailed', [artifact.name, removeResult.error ?? 'Unknown']));
-        }
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  /**
-   * Display detailed information about an artifact.
-   * Fetches content from source repo to extract frontmatter description.
-   */
-  protected async displayArtifactDetails(artifact: MergedArtifact, service: ArtifactService): Promise<void> {
-    this.log('');
-    this.log(`Name: ${artifact.name}`);
-    this.log(`Type: ${artifact.type}`);
-    this.log(`Status: ${artifact.installed ? 'Installed' : 'Available'}`);
-
-    // Try to fetch artifact content and extract frontmatter description
-    let frontmatterDescription: string | undefined;
-
-    if (artifact.source) {
-      this.spinner.start(messages.getMessage('info.FetchingDetails'));
-      try {
-        const content = await service.fetchArtifactContent(artifact.name, {
-          source: artifact.source,
-          type: 'command',
-        });
-        this.spinner.stop();
-
-        if (content) {
-          frontmatterDescription = FrontmatterParser.extractDescription(content);
-        }
-      } catch (error) {
-        this.spinner.stop();
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        this.warn(messages.getMessage('warning.FailedToFetchDetails', [errorMsg]));
-      }
-    }
-
-    // Show frontmatter description if available, otherwise fall back to manifest description
-    const displayDescription = frontmatterDescription ?? artifact.description;
-    if (displayDescription) {
-      this.log(`Description: ${displayDescription}`);
-    }
-
-    if (artifact.source) {
-      this.log(`Source: ${artifact.source}`);
-    }
-    this.log('');
-  }
-
-  /**
-   * Update an artifact's installed status in the list.
-   */
   // eslint-disable-next-line class-methods-use-this
-  protected updateArtifactStatus(commands: MergedArtifact[], artifact: MergedArtifact, installed: boolean): void {
-    const found = commands.find((a) => a.name === artifact.name);
-    if (found) {
-      found.installed = installed;
-    }
-  }
-
-  /**
-   * Prompt user to select a command from the list.
-   * Extracted for test stubbing.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  protected async promptSelect(commands: MergedArtifact[], message: string): Promise<MergedArtifact | null> {
-    const choices = InteractiveTable.toCheckboxChoices(commands);
-
-    if (choices.length === 0) {
-      return null;
-    }
-
-    try {
-      return await select<MergedArtifact>({
-        message,
-        choices,
-        pageSize: 15,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'ExitPromptError') {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Prompt user to select an action for an artifact.
-   * Extracted for test stubbing.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  protected async promptAction(artifact: MergedArtifact): Promise<ArtifactAction | null> {
-    return promptArtifactAction(artifact);
+  protected getMessages(): Messages<string> {
+    return messages;
   }
 }

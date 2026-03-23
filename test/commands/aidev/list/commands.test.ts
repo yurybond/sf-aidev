@@ -190,7 +190,7 @@ describe('aidev list commands', () => {
     expect(result.commands[2].name).to.equal('zebra-command');
   });
 
-  it('handles interactive mode with user selecting an artifact', async () => {
+  it('handles interactive mode with runExpandableSelect', async () => {
     const originalStdinTTY = process.stdin.isTTY;
     const originalStdoutTTY = process.stdout.isTTY;
 
@@ -210,68 +210,8 @@ describe('aidev list commands', () => {
         partialSuccess: false,
       });
 
-      // First call returns a command, second call returns null to exit the loop
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({ name: 'test-command', type: 'command', installed: false });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      // Return 'back' action to go back to the list
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('back');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-      expect(promptSelectStub.callCount).to.equal(2);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with install action', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-        addInstalledArtifact: sandbox.stub(),
-        write: sandbox.stub().resolves(),
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: false }],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'install').resolves({
-        success: true,
-        artifact: 'test-command',
-        type: 'command',
-        tool: 'copilot',
-        installedPath: '/test/path',
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub
-        .onFirstCall()
-        .resolves({ name: 'test-command', type: 'command', installed: false, source: 'test/repo' });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('install');
+      // Stub runExpandableSelect to simulate user exiting immediately
+      sandbox.stub(ListCommands.prototype, 'runExpandableSelect' as keyof ListCommands).resolves();
 
       const result = await ListCommands.run([], oclifConfig);
 
@@ -290,265 +230,7 @@ describe('aidev list commands', () => {
     }
   });
 
-  it('handles interactive mode with remove action', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [
-          { name: 'test-command', type: 'command', path: '/test/path', source: 'test/repo', installedAt: '' },
-        ],
-        getTool: () => 'copilot',
-        removeInstalledArtifact: sandbox.stub(),
-        write: sandbox.stub().resolves(),
-      } as unknown as AiDevConfig);
-      sandbox
-        .stub(LocalFileScanner, 'scanCommands')
-        .resolves([{ name: 'test-command', type: 'command', installed: true, path: '/test/path' }]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: true }],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({
-        success: true,
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub
-        .onFirstCall()
-        .resolves({ name: 'test-command', type: 'command', installed: true, source: 'test/repo' });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('remove');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with view action', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [
-          { name: 'test-command', type: 'command', source: 'test/repo', installed: false, description: 'Test command' },
-        ],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox
-        .stub(ArtifactService.prototype, 'fetchArtifactContent')
-        .resolves('---\ndescription: Detailed test command\n---\n# Test Command');
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({
-        name: 'test-command',
-        type: 'command',
-        installed: false,
-        source: 'test/repo',
-        description: 'Test command',
-      });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('view');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with null action', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: false }],
-        errors: [],
-        partialSuccess: false,
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({ name: 'test-command', type: 'command', installed: false });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      // Return null action
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves(null);
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with failed install', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: false }],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'install').resolves({
-        success: false,
-        artifact: 'test-command',
-        type: 'command',
-        tool: 'copilot',
-        installedPath: '',
-        error: 'Install failed',
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub
-        .onFirstCall()
-        .resolves({ name: 'test-command', type: 'command', installed: false, source: 'test/repo' });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('install');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with failed remove', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [
-          { name: 'test-command', type: 'command', path: '/test/path', source: 'test/repo', installedAt: '' },
-        ],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox
-        .stub(LocalFileScanner, 'scanCommands')
-        .resolves([{ name: 'test-command', type: 'command', installed: true, path: '/test/path' }]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: true }],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'uninstall').resolves({
-        success: false,
-        error: 'Remove failed',
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub
-        .onFirstCall()
-        .resolves({ name: 'test-command', type: 'command', installed: true, source: 'test/repo' });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('remove');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with no commands', async () => {
+  it('skips interactive mode when no commands available', async () => {
     const originalStdinTTY = process.stdin.isTTY;
     const originalStdoutTTY = process.stdout.isTTY;
 
@@ -568,9 +250,13 @@ describe('aidev list commands', () => {
         partialSuccess: false,
       });
 
+      const runExpandableSelectStub = sandbox.stub(ListCommands.prototype, 'runExpandableSelect' as keyof ListCommands);
+      runExpandableSelectStub.resolves();
+
       const result = await ListCommands.run([], oclifConfig);
 
-      expect(result.commands.length).to.equal(0);
+      expect(result.counts.total).to.equal(0);
+      expect(runExpandableSelectStub.called).to.equal(false);
     } finally {
       Object.defineProperty(process.stdin, 'isTTY', {
         value: originalStdinTTY,
@@ -585,245 +271,24 @@ describe('aidev list commands', () => {
     }
   });
 
-  it('handles view action when fetchArtifactContent throws error', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
+  it('uses non-interactive display when TTY is not available', async () => {
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
+      getInstalledArtifacts: () => [],
+      getTool: () => 'copilot',
+    } as unknown as AiDevConfig);
+    sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
+    sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
+      artifacts: [{ name: 'test-command', type: 'command', source: 'test/repo', installed: false }],
+      errors: [],
+      partialSuccess: false,
+    });
 
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
+    const runExpandableSelectStub = sandbox.stub(ListCommands.prototype, 'runExpandableSelect' as keyof ListCommands);
 
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [
-          { name: 'test-command', type: 'command', source: 'test/repo', installed: false, description: 'Test command' },
-        ],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent').rejects(new Error('Network error'));
+    const result = await ListCommands.run([], oclifConfig);
 
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({
-        name: 'test-command',
-        type: 'command',
-        installed: false,
-        source: 'test/repo',
-        description: 'Test command',
-      });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('view');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles view action when artifact has no source', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox
-        .stub(LocalFileScanner, 'scanCommands')
-        .resolves([{ name: 'local-command', type: 'command', installed: true, path: '/local/path' }]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [{ name: 'local-command', type: 'command', installed: true, source: 'local' }],
-        errors: [],
-        partialSuccess: false,
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({
-        name: 'local-command',
-        type: 'command',
-        installed: true,
-        // No source
-      });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('view');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles view action when fetchArtifactContent returns null', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [
-          { name: 'test-command', type: 'command', source: 'test/repo', installed: false, description: 'Test command' },
-        ],
-        errors: [],
-        partialSuccess: false,
-      });
-      sandbox.stub(ArtifactService.prototype, 'fetchArtifactContent').resolves(null);
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub.onFirstCall().resolves({
-        name: 'test-command',
-        type: 'command',
-        installed: false,
-        source: 'test/repo',
-        description: 'Test command',
-      });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands).resolves('view');
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(1);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles promptSelect returning choice with no choices available', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [],
-        errors: [],
-        partialSuccess: false,
-      });
-
-      const result = await ListCommands.run([], oclifConfig);
-
-      expect(result.commands.length).to.equal(0);
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
-  });
-
-  it('handles interactive mode with view action to display details', async () => {
-    const originalStdinTTY = process.stdin.isTTY;
-    const originalStdoutTTY = process.stdout.isTTY;
-
-    try {
-      Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true, writable: true });
-      Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true, writable: true });
-
-      sandbox.stub(AiDevConfig, 'create').resolves({
-        getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
-        getInstalledArtifacts: () => [],
-        getTool: () => 'copilot',
-      } as unknown as AiDevConfig);
-      sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
-      sandbox.stub(ArtifactService.prototype, 'listAvailableWithErrors').resolves({
-        artifacts: [
-          { name: 'test-command', type: 'command', source: 'test/repo', installed: false, description: 'Test' },
-        ],
-        errors: [],
-        partialSuccess: false,
-      });
-
-      const promptSelectStub = sandbox.stub(ListCommands.prototype, 'promptSelect' as keyof ListCommands);
-      promptSelectStub
-        .onFirstCall()
-        .resolves({ name: 'test-command', type: 'command', source: 'test/repo', installed: false });
-      promptSelectStub.onSecondCall().resolves(null);
-
-      const promptActionStub = sandbox.stub(ListCommands.prototype, 'promptAction' as keyof ListCommands);
-      promptActionStub.resolves('view');
-
-      const displayDetailsStub = sandbox.stub(ListCommands.prototype, 'displayArtifactDetails' as keyof ListCommands);
-      displayDetailsStub.resolves();
-
-      await ListCommands.run([], oclifConfig);
-
-      expect(displayDetailsStub.calledOnce).to.be.true;
-    } finally {
-      Object.defineProperty(process.stdin, 'isTTY', {
-        value: originalStdinTTY,
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(process.stdout, 'isTTY', {
-        value: originalStdoutTTY,
-        configurable: true,
-        writable: true,
-      });
-    }
+    expect(result.commands.length).to.equal(1);
+    expect(runExpandableSelectStub.called).to.be.false;
   });
 });

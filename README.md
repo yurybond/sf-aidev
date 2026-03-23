@@ -75,10 +75,10 @@ sf aidev add prompt --name my-prompt
 sf aidev add command --name review-pr
 ```
 
-| Flag       | Char | Description                                                                       |
-| ---------- | ---- | --------------------------------------------------------------------------------- |
+| Flag       | Char | Description                                                                                 |
+| ---------- | ---- | ------------------------------------------------------------------------------------------- |
 | `--name`   | `-n` | Name of the artifact to install. If omitted, shows interactive selection (where supported). |
-| `--source` | `-s` | Source repository. Defaults to the configured default.                            |
+| `--source` | `-s` | Source repository. Defaults to the configured default.                                      |
 
 ### `sf aidev remove`
 
@@ -89,9 +89,9 @@ sf aidev remove
 sf aidev remove --no-prompt
 ```
 
-| Flag          | Description                       |
-| ------------- | --------------------------------- |
-| `--no-prompt` | Skip the confirmation prompt.     |
+| Flag          | Description                   |
+| ------------- | ----------------------------- |
+| `--no-prompt` | Skip the confirmation prompt. |
 
 **Note:** This command requires an interactive terminal. For non-interactive use, use the subcommands below.
 
@@ -130,13 +130,14 @@ sf aidev list --source owner/repo
 | `--source` | `-s` | Filter available artifacts by source repository. |
 
 **Interactive Features:**
+
 - Press **Enter** to expand/collapse artifact descriptions
 - Press **Escape** or **Ctrl+C** to exit
 - Descriptions are fetched on-demand from source repository frontmatter
 
 ### `sf aidev list agents|skills|commands|instructions`
 
-List artifacts filtered by type with interactive action menus.
+List artifacts filtered by type with interactive expandable descriptions. All subcommands share the same UI as the parent `sf aidev list` — press Enter to expand/collapse artifact descriptions inline.
 
 ```bash
 sf aidev list agents
@@ -147,17 +148,18 @@ sf aidev list instructions
 
 | Command             | Description                                                                                                |
 | ------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `list agents`       | Show only agents. Merges local and source manifest. Supports interactive actions (view, install, remove). |
-| `list skills`       | Show only skills. Merges local and source manifest. Supports interactive actions.                          |
-| `list commands`     | Show only commands. Merges local and source manifest. Supports interactive actions.                        |
+| `list agents`       | Show only agents. Merges local and source manifest. Supports expandable descriptions.                      |
+| `list skills`       | Show only skills. Merges local and source manifest. Supports expandable descriptions.                      |
+| `list commands`     | Show only commands. Merges local and source manifest. Supports expandable descriptions.                    |
 | `list instructions` | Show local instruction files (CLAUDE.md, CURSOR.md, CODEX.md, copilot-instructions.md, \*.instructions.md) |
 
 The `agents`, `skills`, and `commands` subcommands support the `--source` flag. The `instructions` command is local-only.
 
 **Interactive Features:**
-- Select an artifact to view actions: View details, Install (if not installed), or Remove (if installed)
-- Press **Escape** to go back to the list
-- Descriptions are fetched from source frontmatter when viewing details
+
+- Press **Enter** to expand/collapse artifact descriptions
+- Press **Escape** or **Ctrl+C** to exit
+- Descriptions are fetched on-demand from source repository frontmatter
 
 ### `sf aidev source add|remove|list|set-default|refresh`
 
@@ -194,22 +196,23 @@ Many commands support rich interactive experiences when running in a terminal:
 
 - **Multi-select checkboxes** - Select multiple artifacts to install/remove at once
 - **Expandable descriptions** - Press Enter to expand/collapse artifact descriptions in lists
-- **Action menus** - View details, install, or remove artifacts directly from list views
+- **Unified list UI** - All list commands (`list`, `list skills`, `list agents`, etc.) share the same expandable select interface
 - **Keyboard navigation** - Space to select, Enter to confirm/expand, Escape to go back
 - **On-demand fetching** - Artifact descriptions are loaded from source repositories when needed
 - **Visual indicators** - Clear checkmarks (☑) for installed, empty boxes (☐) for available artifacts
 
 ### Keyboard Shortcuts
 
-| Key            | Action                                             |
-| -------------- | -------------------------------------------------- |
-| **Space**      | Select/deselect items in checkbox lists            |
-| **Enter**      | Confirm selection or expand/collapse descriptions  |
-| **Escape**     | Go back or exit                                    |
-| **Ctrl+C**     | Cancel and exit                                    |
-| **↑/↓ Arrows** | Navigate through lists                             |
+| Key            | Action                                            |
+| -------------- | ------------------------------------------------- |
+| **Space**      | Select/deselect items in checkbox lists           |
+| **Enter**      | Confirm selection or expand/collapse descriptions |
+| **Escape**     | Go back or exit                                   |
+| **Ctrl+C**     | Cancel and exit                                   |
+| **↑/↓ Arrows** | Navigate through lists                            |
 
 Interactive mode is automatically disabled when:
+
 - Running with `--json` flag
 - Output is piped or redirected
 - Running in CI/CD environments (non-TTY)
@@ -219,10 +222,10 @@ Interactive mode is automatically disabled when:
 
 The plugin auto-detects which AI coding tool is configured in your project:
 
-| Tool               | Detection Paths                                                          | Artifact Installation Paths                                                                                            |
-| ------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Tool               | Detection Paths                                                          | Artifact Installation Paths                                                                                             |
+| ------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | **GitHub Copilot** | `.github/copilot-instructions.md`, `.github/agents/`, `.github/prompts/` | Skills: `.github/copilot-skills/`, Agents: `.github/agents/`, Prompts: `.github/prompts/`, Commands: `.github/prompts/` |
-| **Claude Code**    | `.claude/`                                                               | Skills: `.claude/skills/`, Agents: `.claude/agents/`, Prompts: `.claude/commands/`, Commands: `.claude/commands/`      |
+| **Claude Code**    | `.claude/`                                                               | Skills: `.claude/skills/`, Agents: `.claude/agents/`, Prompts: `.claude/commands/`, Commands: `.claude/commands/`       |
 
 Additional tools (Cursor, Windsurf, Gemini, Codex) are planned.
 
@@ -256,12 +259,12 @@ Source repositories must contain a `manifest.json` at the root:
 
 The plugin supports four artifact types:
 
-| Type        | Description                                      | Example                          |
-| ----------- | ------------------------------------------------ | -------------------------------- |
-| `skill`     | Specialized capabilities for AI assistants       | code review, testing, deployment |
-| `agent`     | Autonomous AI agents for complex tasks           | code helper, architect           |
-| `prompt`    | Reusable prompt templates                        | deploy checklist, code standards |
-| `command`   | Executable commands with AI assistance           | review PR, generate tests        |
+| Type      | Description                                | Example                          |
+| --------- | ------------------------------------------ | -------------------------------- |
+| `skill`   | Specialized capabilities for AI assistants | code review, testing, deployment |
+| `agent`   | Autonomous AI agents for complex tasks     | code helper, architect           |
+| `prompt`  | Reusable prompt templates                  | deploy checklist, code standards |
+| `command` | Executable commands with AI assistance     | review PR, generate tests        |
 
 ### Frontmatter Support
 
@@ -347,14 +350,14 @@ src/
 │   ├── add/                 # skill.ts, agent.ts, prompt.ts, command.ts
 │   ├── remove.ts            # Interactive multi-select remove (parent)
 │   ├── remove/              # skill.ts, agent.ts, prompt.ts, command.ts
-│   ├── list/                # index.ts, agents.ts, skills.ts, commands.ts, instructions.ts
+│   ├── list/                # index.ts, baseTypedListCommand.ts, agents.ts, skills.ts, commands.ts, instructions.ts
 │   └── source/              # add.ts, remove.ts, list.ts, set-default.ts, refresh.ts
 ├── config/                  # Configuration file management (AiDevConfig)
 ├── detectors/               # AI tool auto-detection (CopilotDetector, ClaudeDetector)
 ├── installers/              # Tool-specific file installers + path resolution
 ├── services/                # ArtifactService, SourceService, LocalFileScanner
 ├── sources/                 # GitHubFetcher, SourceManager, ManifestCache, ManifestBuilder
-├── ui/                      # Interactive UI components (prompts, tables, expandable select)
+├── ui/                      # Interactive UI components (expandableSelect, interactivePrompts, interactiveTable)
 ├── utils/                   # FrontmatterParser and utility functions
 └── types/                   # TypeScript type definitions (Manifest, Artifact, etc.)
 messages/                    # Markdown help/error messages per command
@@ -401,18 +404,19 @@ sf aidev init
 
 ### Technology Stack
 
-| Category       | Tool                                               | Config             |
-| -------------- | -------------------------------------------------- | ------------------ |
-| CLI Framework  | [oclif](https://oclif.io/) v4                      | `package.json`     |
-| Language       | TypeScript 5.x (strict ESM)                        | `tsconfig.json`    |
-| Build          | [Wireit](https://github.com/nicolo-ribaudo/wireit) | `package.json`     |
-| Test           | Mocha + Chai + Sinon                               | `.mocharc.json`    |
-| Coverage       | c8 (90% threshold)                                 | `.c8rc.json`       |
-| Lint           | ESLint + sf-plugin rules                           | `.eslintrc.cjs`    |
-| Format         | Prettier                                           | `.prettierrc.json` |
-| Git Hooks      | Husky + commitlint + lint-staged                   | `.husky/`          |
-| Interactive UI | @inquirer/prompts                                  | `package.json`     |
-| HTTP Client    | got 13.0.0                                         | `package.json`     |
+| Category       | Tool                                                 | Version / Config   |
+| -------------- | ---------------------------------------------------- | ------------------ |
+| CLI Framework  | [oclif](https://oclif.io/) v4                        | `package.json`     |
+| Language       | TypeScript 5.x (strict ESM)                          | `tsconfig.json`    |
+| SF CLI Core    | @salesforce/sf-plugins-core ^12, @salesforce/core ^8 | `package.json`     |
+| Build          | [Wireit](https://github.com/nicolo-ribaudo/wireit)   | `package.json`     |
+| Test           | Mocha + Chai + Sinon                                 | `.mocharc.json`    |
+| Coverage       | c8 ^10 (95% lines/stmts, 93% branches, 88% funcs)    | `.c8rc.json`       |
+| Lint           | ESLint + sf-plugin rules                             | `.eslintrc.cjs`    |
+| Format         | Prettier                                             | `.prettierrc.json` |
+| Git Hooks      | Husky + commitlint + lint-staged ^16                 | `.husky/`          |
+| Interactive UI | @inquirer/prompts ^8.3, @inquirer/core ^10.3         | `package.json`     |
+| HTTP Client    | got 13.0.0                                           | `package.json`     |
 
 ### Adding a New Command
 
@@ -480,12 +484,13 @@ Tests use Mocha + Chai + Sinon. Stub services and config, then call `Command.run
 - **Result types**: Use `type` (not `interface`) for command result definitions.
 - **Messages**: All user-facing strings must be in `messages/*.md` files, never hardcoded. Use `Messages.loadMessages()`.
 - **Commands**: All commands must set `enableJsonFlag = true` for `--json` support.
-- **Testing**: Aim for 90% coverage across lines, statements, functions, and branches.
+- **Testing**: Aim for 90%+ coverage on new code (global thresholds: 95% lines/statements, 93% branches, 88% functions).
 - **Commits**: Follow Conventional Commits format: `<type>(<scope>): <subject>` (enforced by commitlint).
 
 ### Architecture Guidelines
 
 - **Commands are thin** - Parse flags, call services, format output. No business logic in commands.
+- **Base classes for shared logic** - Typed list subcommands extend `BaseTypedListCommand` (Template Method pattern).
 - **Services orchestrate** - `ArtifactService` and `SourceService` contain business logic.
 - **Two config scopes** - Global config (`~/.sf/sf-aidev.json`) for sources, local config (`.sf/sf-aidev.json`) for artifacts and tool.
 - **Static fetcher** - `GitHubFetcher` uses static methods for all GitHub API calls.
@@ -512,6 +517,7 @@ const output = await Command.run(['--name', 'value'], oclifConfig);
 ```
 
 Always stub:
+
 - Config creation (`AiDevConfig.create`)
 - Service methods
 - File system operations
@@ -520,11 +526,13 @@ Always stub:
 ### Git Workflow
 
 Pre-commit hooks enforce:
+
 - **Linting** - ESLint must pass
 - **Formatting** - Prettier auto-formats staged files
 - **Commit message** - Conventional Commits format required
 
 Pre-push hooks enforce:
+
 - **Build** - TypeScript compilation must succeed
 - **Tests** - All tests must pass with 90% coverage
 
@@ -533,7 +541,7 @@ Pre-push hooks enforce:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
 3. Make changes following the conventions above
-4. Write tests (aim for 90% coverage)
+4. Write tests (aim for 90%+ coverage)
 5. Ensure `yarn build` and `yarn test` pass
 6. Commit using Conventional Commits format
 7. Push and create a Pull Request

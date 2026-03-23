@@ -403,19 +403,19 @@ plugin-name/
 
 ## Configuration Files Reference
 
-| File                    | Purpose                                                            |
-| ----------------------- | ------------------------------------------------------------------ |
-| `package.json`          | Dependencies, scripts, oclif config, wireit tasks                  |
-| `tsconfig.json`         | TypeScript compiler options (extends @salesforce/dev-config)       |
-| `.eslintrc.cjs`         | ESLint rules (eslint-config-salesforce-typescript + sf-plugin)     |
-| `.prettierrc.json`      | Prettier config (@salesforce/prettier-config)                      |
-| `.mocharc.json`         | Mocha test runner config (ts-node, 600s timeout)                   |
-| `.c8rc.json`            | Code coverage thresholds (90% lines/statements/functions/branches) |
-| `.editorconfig`         | Editor settings (2-space indent, UTF-8)                            |
-| `.husky/`               | Git hooks (pre-commit, commit-msg, pre-push)                       |
-| `.lintstagedrc.cjs`     | Lint-staged config for pre-commit formatting                       |
-| `commitlint.config.cjs` | Commit message validation (@commitlint/config-conventional)        |
-| `.sfdevrc.json`         | Salesforce dev-scripts config (wireit test dependencies)           |
+| File                    | Purpose                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `package.json`          | Dependencies, scripts, oclif config, wireit tasks                                         |
+| `tsconfig.json`         | TypeScript compiler options (extends @salesforce/dev-config)                              |
+| `.eslintrc.cjs`         | ESLint rules (eslint-config-salesforce-typescript + sf-plugin)                            |
+| `.prettierrc.json`      | Prettier config (@salesforce/prettier-config)                                             |
+| `.mocharc.json`         | Mocha test runner config (ts-node, 600s timeout)                                          |
+| `.c8rc.json`            | Code coverage thresholds (95% lines/statements, 93% branches, 88% functions; UI excluded) |
+| `.editorconfig`         | Editor settings (2-space indent, UTF-8)                                                   |
+| `.husky/`               | Git hooks (pre-commit, commit-msg, pre-push)                                              |
+| `.lintstagedrc.cjs`     | Lint-staged config for pre-commit formatting                                              |
+| `commitlint.config.cjs` | Commit message validation (@commitlint/config-conventional)                               |
+| `.sfdevrc.json`         | Salesforce dev-scripts config (wireit test dependencies)                                  |
 
 ## Code Quality Tools
 

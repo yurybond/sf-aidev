@@ -58,6 +58,7 @@ Both are passed into `ArtifactService` as separate constructor arguments. Comman
 
 - **`services/artifactService.ts`** — Main orchestrator. Handles detect/install/uninstall/list operations. Uses in-memory manifest cache + disk `ManifestCache` fallback.
 - **`services/sourceService.ts`** — Source repository CRUD. Validates manifests on add, supports auto-discovery fallback via `ManifestBuilder`.
+- **`services/localFileScanner.ts`** — Scans local project for installed artifacts by type. Provides `mergeArtifacts()` to combine local and remote lists, and `groupByType()` for grouped display.
 - **`sources/gitHubFetcher.ts`** — Static class fetching files from `raw.githubusercontent.com` and repo trees from GitHub API. All methods are static.
 - **`sources/manifestCache.ts`** — Disk cache at `~/.sf/sf-aidev-manifests/`. Repo `owner/repo` maps to `owner__repo.json`. Staleness threshold: 1 week.
 - **`sources/manifestBuilder.ts`** — Auto-discovers artifacts from file paths using regex-based `DISCOVERY_RULES` when no `manifest.json` exists.
@@ -65,6 +66,10 @@ Both are passed into `ArtifactService` as separate constructor arguments. Comman
 - **`config/aiDevConfig.ts`** — Config CRUD: `getSources()`, `addSource()`, `getInstalledArtifacts()`, `setTool()`, etc. Returns deep copies to prevent mutation.
 - **`installers/pathResolver.ts`** — Maps `(artifactType, tool)` → installation path (e.g., `skill + copilot → .github/copilot-skills`).
 - **`detectors/registry.ts`** — Static registry of `Detector` implementations. Currently: `CopilotDetector`, `ClaudeDetector`.
+- **`commands/aidev/list/baseTypedListCommand.ts`** — Abstract base class for typed list subcommands (skills, agents, commands, instructions). Template Method pattern: `runList()` orchestrates config creation, local scanning, remote fetching, merging, sorting, and interactive/plain display. Subclasses implement `getArtifactType()`, `getSectionTitle()`, `scanLocal()`, `buildResult()`, `getMessages()`.
+- **`ui/expandableSelect.ts`** — Custom `@inquirer/core` `createPrompt` component for browsing artifacts with Enter-to-toggle-description, Escape-to-exit, and on-demand remote description fetching.
+- **`ui/interactivePrompts.ts`** — Prompt helpers: `toExpandableChoices()` (grouped, for `aidev list`), `toExpandableChoicesFlat()` (flat, for typed subcommands), `isInteractive()`, checkbox/select/confirm prompts.
+- **`utils/frontmatterParser.ts`** — Parses YAML frontmatter from artifact markdown files. Used for extracting `description` fields on-demand.
 
 ### Adding a New Command
 
@@ -97,7 +102,7 @@ Always `sandbox.restore()` in `afterEach`. Config instances must be `Config.load
 - **Result types**: Use `type` (not `interface`) for command result definitions
 - **All user-facing strings**: in `messages/*.md` files, never hardcoded
 - **`enableJsonFlag = true`** on all commands for `--json` support
-- **Coverage threshold**: 90% (lines/statements/functions/branches) via `.c8rc.json`
+- **Coverage threshold**: 95% lines/statements, 93% branches, 88% functions via `.c8rc.json` (UI code excluded)
 - **Git hooks**: pre-commit (lint + pretty-quick), commit-msg (commitlint), pre-push (build + test)
 
 ## References

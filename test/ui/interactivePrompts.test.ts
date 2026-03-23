@@ -14,7 +14,6 @@ import {
   toGroupedCheckboxChoices,
   toExpandableChoices,
   promptArtifactList,
-  promptArtifactAction,
   promptArtifactCheckbox,
   promptGroupedCheckbox,
 } from '../../src/ui/interactivePrompts.js';
@@ -183,14 +182,6 @@ describe('interactivePrompts', () => {
 
       const result = await promptArtifactList(emptyGroups, 'Select an artifact');
       expect(result).to.be.null;
-    });
-  });
-
-  describe('promptArtifactAction', () => {
-    // Note: We can't easily test the full prompt flow without mocking the terminal
-    // This test simply ensures the function is importable and used (for coverage report)
-    it('is a function', () => {
-      expect(typeof promptArtifactAction).to.equal('function');
     });
   });
 

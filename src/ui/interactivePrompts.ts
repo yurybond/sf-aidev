@@ -7,7 +7,6 @@
 import * as readline from 'node:readline';
 import { select, checkbox, confirm, Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
-import type { ArtifactType } from '../types/manifest.js';
 import type { ExpandableItem } from './expandableSelect.js';
 
 /**
@@ -21,7 +20,6 @@ const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
  */
 const SELECT_HELP = '(↑↓ navigate, Enter select, Esc exit)';
 const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, Enter confirm, Esc cancel)';
-const ACTION_HELP = '(↑↓ navigate, Enter select, Esc back)';
 
 /**
  * Cancellable promise type returned by @inquirer/prompts.
@@ -71,19 +69,6 @@ export const CHECKBOX_THEME = {
 } as const;
 
 /**
- * Action types for the artifact action menu.
- */
-export type ArtifactAction = 'view' | 'install' | 'remove' | 'back';
-
-/**
- * Result of the action prompt.
- */
-export type ActionResult = {
-  action: ArtifactAction;
-  artifact: MergedArtifact;
-};
-
-/**
  * Check if stdin/stdout supports interactive prompts.
  *
  * @returns True if the environment supports interactive prompts.
@@ -108,7 +93,7 @@ function isCancelledError(error: unknown): boolean {
 }
 
 /**
- * Format artifact display name with installation status indicator.
+ * Map artifact display name with installation status indicator.
  * Used for select prompts where we need to show status visually.
  *
  * @param artifact - The artifact to format.
@@ -131,17 +116,6 @@ function formatArtifactName(artifact: MergedArtifact): string {
   const description = artifact.description ? ` - ${artifact.description}` : '';
   return `${artifact.name}${description}`;
 }
-
-/**
- * Map of artifact types to display labels.
- */
-const TYPE_LABELS: Record<ArtifactType | 'instruction', string> = {
-  agent: 'Agents',
-  skill: 'Skills',
-  prompt: 'Prompts',
-  command: 'Commands',
-  instruction: 'Instructions',
-};
 
 /**
  * Convert grouped artifacts to select prompt choices.
@@ -261,40 +235,6 @@ export async function promptArtifactList(groups: GroupedArtifacts, message: stri
         choices,
         pageSize: 15,
       }) as CancellablePromise<MergedArtifact>
-    );
-  } catch (error) {
-    if (isCancelledError(error)) {
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
- * Prompt user to select an action for an artifact.
- * Returns null if user cancels (Escape/Ctrl+C).
- *
- * @param artifact - The artifact to act on.
- * @returns Selected action or null if cancelled.
- */
-export async function promptArtifactAction(artifact: MergedArtifact): Promise<ArtifactAction | null> {
-  const choices: Array<{ name: string; value: ArtifactAction }> = [{ name: 'View details', value: 'view' }];
-
-  if (artifact.installed) {
-    choices.push({ name: 'Remove', value: 'remove' });
-  } else {
-    choices.push({ name: 'Install', value: 'install' });
-  }
-
-  choices.push({ name: 'Back to list', value: 'back' });
-
-  try {
-    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
-    return await withEscapeHandling(
-      select<ArtifactAction>({
-        message: `Action for "${artifact.name}" (${TYPE_LABELS[artifact.type]}): ${ACTION_HELP}`,
-        choices,
-      }) as CancellablePromise<ArtifactAction>
     );
   } catch (error) {
     if (isCancelledError(error)) {
@@ -465,6 +405,33 @@ export function toExpandableChoices(groups: GroupedArtifacts): ExpandableItem[] 
         value: artifact,
       });
     }
+  }
+
+  return choices;
+}
+
+/**
+ * Convert flat artifact array to expandable select choices.
+ * Used with typed list subcommands (skills, agents, commands, instructions).
+ *
+ * @param artifacts - Array of artifacts.
+ * @param sectionTitle - Section title to display in the separator.
+ * @returns Array of expandable choices with a single separator.
+ */
+export function toExpandableChoicesFlat(artifacts: MergedArtifact[], sectionTitle: string): ExpandableItem[] {
+  const choices: ExpandableItem[] = [];
+
+  if (artifacts.length === 0) {
+    return choices;
+  }
+
+  choices.push({ type: 'separator', separator: `--- ${sectionTitle} ---` });
+
+  for (const artifact of artifacts) {
+    choices.push({
+      name: artifact.name,
+      value: artifact,
+    });
   }
 
   return choices;
