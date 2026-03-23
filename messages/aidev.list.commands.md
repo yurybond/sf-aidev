@@ -6,9 +6,11 @@ List all commands available from configured sources and installed locally.
 
 Display a list of all commands from configured source repositories merged with locally installed commands. Shows installation status, and supports interactive mode with view/install/remove actions.
 
+When --source is not provided, the command automatically uses your default source repository (if configured). A green message displays which source is active. Both local and remote commands are filtered by the active source.
+
 # flags.source.summary
 
-Filter available commands to a specific source repository (owner/repo).
+Filter commands by source repository. Uses default source if not specified.
 
 # examples
 

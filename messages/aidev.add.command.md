@@ -6,13 +6,15 @@ Install a command from a configured source repository.
 
 Install a command by name from a configured source repository, or interactively select from available commands when no name is provided. The command is installed to the correct path for the detected AI tool (e.g., `.github/commands/` for Copilot, `.claude/commands/` for Claude).
 
+When --source is not provided, the command automatically uses your default source repository (if configured). In interactive mode, a green message displays which source is active.
+
 # flags.name.summary
 
 Name of the command to install. If not provided, shows interactive selection.
 
 # flags.source.summary
 
-Source repository (owner/repo) to install from. Defaults to the configured default source.
+Source repository (owner/repo) to install from. Uses default source if not specified.
 
 # examples
 

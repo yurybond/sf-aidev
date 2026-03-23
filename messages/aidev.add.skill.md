@@ -6,13 +6,15 @@ Install a skill from a configured source repository.
 
 Install a skill by name from a configured source repository, or interactively select from available skills when no name is provided. The skill is installed to the correct path for the detected AI tool (e.g., `.github/copilot-skills/` for Copilot, `.claude/skills/` for Claude).
 
+When --source is not provided, the command automatically uses your default source repository (if configured). In interactive mode, a green message displays which source is active.
+
 # flags.name.summary
 
 Name of the skill to install. If not provided, shows interactive selection.
 
 # flags.source.summary
 
-Source repository (owner/repo) to install from. Defaults to the configured default source.
+Source repository (owner/repo) to install from. Uses default source if not specified.
 
 # examples
 
