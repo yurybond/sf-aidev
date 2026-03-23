@@ -119,9 +119,12 @@ export default class Add extends SfCommand<AddResult> {
       ]);
     }
 
+    // Determine source to use (explicit flag or default source)
+    const sourceToUse = flags.source ?? globalConfig.getDefaultSource()?.repo;
+
     // Fetch available artifacts
     this.spinner.start(messages.getMessage('info.Fetching'));
-    const available = await service.listAvailable({ source: flags.source });
+    const available = await service.listAvailable({ source: sourceToUse });
     this.spinner.stop();
 
     // Filter out already installed artifacts

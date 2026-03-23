@@ -61,9 +61,12 @@ export default class AddAgent extends SfCommand<AddAgentResult> {
     const localConfig = await AiDevConfig.create({ isGlobal: false });
     const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
+    // Determine source to use (explicit flag or default source)
+    const sourceToUse = flags.source ?? globalConfig.getDefaultSource()?.repo;
+
     // If name is provided, install directly (non-interactive mode)
     if (flags.name) {
-      return this.installSingle(service, flags.name, flags.source);
+      return this.installSingle(service, flags.name, sourceToUse);
     }
 
     // Interactive mode - name not provided
@@ -73,7 +76,7 @@ export default class AddAgent extends SfCommand<AddAgentResult> {
       ]);
     }
 
-    return this.runInteractive(service, flags.source);
+    return this.runInteractive(service, sourceToUse);
   }
 
   /**
@@ -83,7 +86,7 @@ export default class AddAgent extends SfCommand<AddAgentResult> {
   // eslint-disable-next-line class-methods-use-this
   protected async promptCheckbox(
     message: string,
-    choices: Array<CheckboxChoice | Separator>,
+    choices: Array<CheckboxChoice | Separator>
   ): Promise<AvailableArtifact[]> {
     return promptCheckboxGeneric<AvailableArtifact>({
       message,
@@ -102,7 +105,7 @@ export default class AddAgent extends SfCommand<AddAgentResult> {
     if (!result.success) {
       throw new SfError(
         messages.getMessage('error.InstallFailed', [name, result.error ?? 'Unknown error']),
-        'InstallError',
+        'InstallError'
       );
     }
 

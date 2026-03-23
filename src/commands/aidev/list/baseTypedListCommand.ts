@@ -54,6 +54,14 @@ export abstract class BaseTypedListCommand<TResult> extends SfCommand<TResult> {
     const projectPath = process.cwd();
     const msgs = this.getMessages();
 
+    // Determine source to use (explicit flag or default source)
+    const sourceToUse = this.hasSource() ? sourceFlag ?? globalConfig.getDefaultSource()?.repo : undefined;
+
+    // Show which source is being displayed (if any)
+    if (sourceToUse && !this.jsonEnabled()) {
+      this.log(`\x1b[32mShowing artifacts from source: ${sourceToUse}\x1b[0m`);
+    }
+
     // Scan local artifacts
     const localArtifacts = await this.scanLocal(projectPath);
 
@@ -62,7 +70,7 @@ export abstract class BaseTypedListCommand<TResult> extends SfCommand<TResult> {
     let availableArtifacts: AvailableArtifact[] = [];
     if (this.hasSource()) {
       const { artifacts, errors } = await service.listAvailableWithErrors({
-        source: sourceFlag,
+        source: sourceToUse,
         type: this.getArtifactType() as ArtifactType,
       });
       availableArtifacts = artifacts;
@@ -83,7 +91,7 @@ export abstract class BaseTypedListCommand<TResult> extends SfCommand<TResult> {
       localArtifacts as ScannedArtifact[],
       availableArtifacts,
       installedArtifacts,
-      sourceFlag
+      sourceToUse
     );
 
     // Sort alphabetically
