@@ -131,6 +131,7 @@ describe('BaseTypedListCommand', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
   }
@@ -155,6 +156,7 @@ describe('BaseTypedListCommand', () => {
       sandbox.stub(AiDevConfig, 'create').resolves({
         getSources: () => [],
         getInstalledArtifacts: () => [],
+        getDefaultSource: () => undefined,
         getTool: () => 'copilot',
       } as unknown as AiDevConfig);
       sandbox.stub(LocalFileScanner, 'scanSkills').resolves([]);

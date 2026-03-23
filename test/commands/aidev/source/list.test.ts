@@ -28,7 +28,10 @@ describe('aidev source list', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getDefaultSource: () => undefined,
+      getInstalledArtifacts: () => [],
+    } as unknown as AiDevConfig);
     listStub = sandbox.stub(SourceService.prototype, 'list');
   });
 

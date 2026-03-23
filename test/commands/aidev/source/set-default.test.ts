@@ -37,7 +37,10 @@ describe('aidev source set-default', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getDefaultSource: () => undefined,
+      getInstalledArtifacts: () => [],
+    } as unknown as AiDevConfig);
     hasStub = sandbox.stub(SourceService.prototype, 'has');
     getDefaultStub = sandbox.stub(SourceService.prototype, 'getDefault');
     setDefaultStub = sandbox.stub(SourceService.prototype, 'setDefault');

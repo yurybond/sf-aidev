@@ -25,7 +25,10 @@ describe('aidev remove (parent)', () => {
   });
 
   it('throws NonInteractiveError when --json flag is used', async () => {
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getDefaultSource: () => undefined,
+      getInstalledArtifacts: () => [],
+    } as unknown as AiDevConfig);
 
     try {
       await Remove.run(['--json'], oclifConfig);

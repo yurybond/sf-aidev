@@ -13,9 +13,11 @@ In interactive mode (TTY), use arrow keys to navigate and Escape to exit. Press 
 
 Merges artifacts found locally with those available from configured source repositories.
 
+When --source is not provided, the command automatically uses your default source repository (if configured). A green message displays which source is active. Both local (installed) and remote (available) artifacts are filtered by the active source.
+
 # flags.source.summary
 
-Filter available artifacts by source repository.
+Filter artifacts by source repository. Uses default source if not specified.
 
 # examples
 

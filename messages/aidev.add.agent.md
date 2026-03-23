@@ -6,13 +6,15 @@ Install an agent from a configured source repository.
 
 Install an agent by name from a configured source repository, or interactively select from available agents when no name is provided. The agent is installed to the correct path for the detected AI tool (e.g., `.github/agents/` for Copilot, `.claude/agents/` for Claude).
 
+When --source is not provided, the command automatically uses your default source repository (if configured). In interactive mode, a green message displays which source is active.
+
 # flags.name.summary
 
 Name of the agent to install. If not provided, shows interactive selection.
 
 # flags.source.summary
 
-Source repository (owner/repo) to install from. Defaults to the configured default source.
+Source repository (owner/repo) to install from. Uses default source if not specified.
 
 # examples
 

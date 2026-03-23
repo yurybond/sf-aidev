@@ -6,9 +6,11 @@ Interactively select and install artifacts from configured sources.
 
 Browse all available artifacts grouped by category (Agents, Skills, Prompts) and select multiple items to install at once. This command requires an interactive terminal; for non-interactive use, use the subcommands: `sf aidev add skill --name X`, `sf aidev add agent --name X`, or `sf aidev add prompt --name X`.
 
+When --source is not provided, the command automatically uses your default source repository (if configured). A green message displays which source is active. Only artifacts from the active source are shown for installation.
+
 # flags.source.summary
 
-Filter artifacts to a specific source repository (owner/repo).
+Filter artifacts to a specific source repository. Uses default source if not specified.
 
 # flags.no-prompt.summary
 
