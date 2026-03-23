@@ -303,6 +303,149 @@ describe('LocalFileScanner', () => {
       const result = LocalFileScanner.mergeArtifacts([], []);
       expect(result).to.deep.equal([]);
     });
+
+    it('should enrich local artifacts with source from installedArtifacts', () => {
+      const local: ScannedArtifact[] = [
+        { name: 'local-skill', type: 'skill', installed: true, path: '/path' },
+        { name: 'another-skill', type: 'skill', installed: true, path: '/path2' },
+      ];
+      const manifest = [
+        {
+          name: 'remote-skill',
+          type: 'skill' as const,
+          description: 'A skill',
+          source: 'owner/repo',
+          installed: false,
+        },
+      ];
+      const installed = [
+        { name: 'local-skill', type: 'skill' as const, source: 'owner/source1' },
+        { name: 'another-skill', type: 'skill' as const, source: 'owner/source2' },
+      ];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest, installed);
+
+      expect(result).to.have.lengthOf(3);
+      expect(result.find((a) => a.name === 'local-skill')?.source).to.equal('owner/source1');
+      expect(result.find((a) => a.name === 'another-skill')?.source).to.equal('owner/source2');
+      expect(result.find((a) => a.name === 'remote-skill')?.source).to.equal('owner/repo');
+    });
+
+    it('should filter local artifacts by source when sourceFilter provided', () => {
+      const local: ScannedArtifact[] = [
+        { name: 'skill-a', type: 'skill', installed: true, path: '/path' },
+        { name: 'skill-b', type: 'skill', installed: true, path: '/path2' },
+        { name: 'skill-c', type: 'skill', installed: true, path: '/path3' },
+      ];
+      const manifest = [
+        {
+          name: 'remote-skill',
+          type: 'skill' as const,
+          description: 'Remote from repo1',
+          source: 'owner/repo1',
+          installed: false,
+        },
+        {
+          name: 'remote-skill-2',
+          type: 'skill' as const,
+          description: 'Remote from repo2',
+          source: 'owner/repo2',
+          installed: false,
+        },
+      ];
+      const installed = [
+        { name: 'skill-a', type: 'skill' as const, source: 'owner/repo1' },
+        { name: 'skill-b', type: 'skill' as const, source: 'owner/repo2' },
+        { name: 'skill-c', type: 'skill' as const, source: 'owner/repo1' },
+      ];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest, installed, 'owner/repo1');
+
+      // Should only include local artifacts from repo1 and remote artifacts from repo1
+      expect(result).to.have.lengthOf(3);
+      const names = result.map((a) => a.name);
+      expect(names).to.include('skill-a');
+      expect(names).to.include('skill-c');
+      expect(names).to.include('remote-skill');
+      expect(names).to.not.include('skill-b');
+      expect(names).to.not.include('remote-skill-2');
+    });
+
+    it('should exclude local artifacts without source when sourceFilter is active', () => {
+      const local: ScannedArtifact[] = [
+        { name: 'skill-with-source', type: 'skill', installed: true, path: '/path' },
+        { name: 'skill-no-source', type: 'skill', installed: true, path: '/path2' },
+      ];
+      const manifest: Array<{ name: string; type: 'skill'; description?: string; source: string; installed: boolean }> =
+        [];
+      const installed = [{ name: 'skill-with-source', type: 'skill' as const, source: 'owner/repo1' }];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest, installed, 'owner/repo1');
+
+      // Only skill-with-source should be included
+      expect(result).to.have.lengthOf(1);
+      expect(result[0].name).to.equal('skill-with-source');
+    });
+
+    it('should show all artifacts when no sourceFilter provided', () => {
+      const local: ScannedArtifact[] = [
+        { name: 'skill-a', type: 'skill', installed: true, path: '/path' },
+        { name: 'skill-b', type: 'skill', installed: true, path: '/path2' },
+      ];
+      const manifest = [
+        {
+          name: 'remote-skill',
+          type: 'skill' as const,
+          source: 'owner/repo1',
+          installed: false,
+        },
+      ];
+      const installed = [
+        { name: 'skill-a', type: 'skill' as const, source: 'owner/repo1' },
+        { name: 'skill-b', type: 'skill' as const, source: 'owner/repo2' },
+      ];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest, installed);
+
+      // Should include all artifacts
+      expect(result).to.have.lengthOf(3);
+    });
+
+    it('should handle artifacts with missing installedArtifacts data', () => {
+      const local: ScannedArtifact[] = [{ name: 'local-skill', type: 'skill', installed: true, path: '/path' }];
+      const manifest = [
+        {
+          name: 'local-skill',
+          type: 'skill' as const,
+          description: 'Has manifest',
+          source: 'owner/repo',
+          installed: true,
+        },
+      ];
+      const installed: Array<{ name: string; type: 'skill'; source: string }> = [];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest, installed);
+
+      // Should fallback to manifest source
+      expect(result).to.have.lengthOf(1);
+      expect(result[0].source).to.equal('owner/repo');
+    });
+
+    it('should work with backward compatible calls (no installedArtifacts)', () => {
+      const local: ScannedArtifact[] = [{ name: 'local-skill', type: 'skill', installed: true, path: '/path' }];
+      const manifest = [
+        {
+          name: 'remote-skill',
+          type: 'skill' as const,
+          source: 'owner/repo',
+          installed: false,
+        },
+      ];
+
+      const result = LocalFileScanner.mergeArtifacts(local, manifest);
+
+      expect(result).to.have.lengthOf(2);
+    });
   });
 
   describe('groupByType', () => {

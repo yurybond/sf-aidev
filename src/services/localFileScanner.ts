@@ -194,6 +194,8 @@ export class LocalFileScanner {
    *
    * @param localArtifacts - Artifacts found locally.
    * @param manifestArtifacts - Artifacts from source manifests.
+   * @param installedArtifacts - Installed artifact records from config (for source enrichment).
+   * @param sourceFilter - Optional source filter to apply.
    * @returns Merged and deduplicated list.
    */
   public static mergeArtifacts(
@@ -204,7 +206,13 @@ export class LocalFileScanner {
       description?: string;
       source: string;
       installed: boolean;
-    }>
+    }>,
+    installedArtifacts: Array<{
+      name: string;
+      type: ArtifactType | 'instruction';
+      source: string;
+    }> = [],
+    sourceFilter?: string
   ): MergedArtifact[] {
     const merged: MergedArtifact[] = [];
     const seen = new Set<string>();
@@ -214,14 +222,27 @@ export class LocalFileScanner {
       const key = `${local.type}:${local.name}`;
       if (!seen.has(key)) {
         seen.add(key);
+
+        // Look up source from installed artifacts config
+        const installedRecord = installedArtifacts.find((inst) => inst.name === local.name && inst.type === local.type);
+
         // Try to find description from manifest
         const manifestMatch = manifestArtifacts.find((m) => m.name === local.name && m.type === local.type);
+
+        // Determine the source (prefer installedRecord, fallback to manifestMatch)
+        const source = installedRecord?.source ?? manifestMatch?.source;
+
+        // Apply source filter if provided
+        if (sourceFilter && source !== sourceFilter) {
+          continue;
+        }
+
         merged.push({
           name: local.name,
           type: local.type,
           installed: true,
           description: manifestMatch?.description,
-          source: manifestMatch?.source,
+          source,
         });
       }
     }
@@ -230,6 +251,11 @@ export class LocalFileScanner {
     for (const manifest of manifestArtifacts) {
       const key = `${manifest.type}:${manifest.name}`;
       if (!seen.has(key)) {
+        // Apply source filter if provided
+        if (sourceFilter && manifest.source !== sourceFilter) {
+          continue;
+        }
+
         seen.add(key);
         merged.push({
           name: manifest.name,

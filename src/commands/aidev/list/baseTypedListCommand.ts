@@ -75,8 +75,16 @@ export abstract class BaseTypedListCommand<TResult> extends SfCommand<TResult> {
       }
     }
 
-    // Merge local with manifest artifacts
-    const merged = LocalFileScanner.mergeArtifacts(localArtifacts as ScannedArtifact[], availableArtifacts);
+    // Get installed artifacts for source enrichment
+    const installedArtifacts = localConfig.getInstalledArtifacts();
+
+    // Merge local with manifest artifacts (with source filtering)
+    const merged = LocalFileScanner.mergeArtifacts(
+      localArtifacts as ScannedArtifact[],
+      availableArtifacts,
+      installedArtifacts,
+      sourceFlag
+    );
 
     // Sort alphabetically
     merged.sort((a, b) => a.name.localeCompare(b.name));

@@ -67,8 +67,16 @@ export default class List extends SfCommand<ListResult> {
       }
     }
 
-    // Merge local with manifest artifacts
-    const merged = LocalFileScanner.mergeArtifacts(localArtifacts, availableArtifacts);
+    // Get installed artifacts for source enrichment
+    const installedArtifacts = localConfig.getInstalledArtifacts();
+
+    // Merge local with manifest artifacts (with source filtering)
+    const merged = LocalFileScanner.mergeArtifacts(
+      localArtifacts,
+      availableArtifacts,
+      installedArtifacts,
+      flags.source
+    );
 
     // Group by type
     const groups = LocalFileScanner.groupByType(merged, instructions);
