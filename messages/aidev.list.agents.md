@@ -13,9 +13,11 @@ In interactive mode (TTY), use arrow keys to navigate, Enter to select, and Esca
 
 Merges agents found locally with those available from configured source repositories.
 
+When --source is not provided, the command automatically uses your default source repository (if configured). A green message displays which source is active. Both local and remote agents are filtered by the active source.
+
 # flags.source.summary
 
-Filter available agents by source repository.
+Filter agents by source repository. Uses default source if not specified.
 
 # examples
 

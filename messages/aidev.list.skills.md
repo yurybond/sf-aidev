@@ -13,9 +13,11 @@ In interactive mode (TTY), use arrow keys to navigate, Enter to select, and Esca
 
 Merges skills found locally with those available from configured source repositories.
 
+When --source is not provided, the command automatically uses your default source repository (if configured). A green message displays which source is active. Both local and remote skills are filtered by the active source.
+
 # flags.source.summary
 
-Filter available skills by source repository.
+Filter skills by source repository. Uses default source if not specified.
 
 # examples
 

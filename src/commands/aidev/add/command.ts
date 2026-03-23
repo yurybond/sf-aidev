@@ -61,9 +61,12 @@ export default class AddCommand extends SfCommand<AddCommandResult> {
     const localConfig = await AiDevConfig.create({ isGlobal: false });
     const service = new ArtifactService(globalConfig, localConfig, process.cwd());
 
+    // Determine source to use (explicit flag or default source)
+    const sourceToUse = flags.source ?? globalConfig.getDefaultSource()?.repo;
+
     // If name is provided, install directly (non-interactive mode)
     if (flags.name) {
-      return this.installSingle(service, flags.name, flags.source);
+      return this.installSingle(service, flags.name, sourceToUse);
     }
 
     // Interactive mode - name not provided
@@ -73,7 +76,7 @@ export default class AddCommand extends SfCommand<AddCommandResult> {
       ]);
     }
 
-    return this.runInteractive(service, flags.source);
+    return this.runInteractive(service, sourceToUse);
   }
 
   /**

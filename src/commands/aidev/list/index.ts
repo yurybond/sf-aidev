@@ -50,6 +50,14 @@ export default class List extends SfCommand<ListResult> {
     const localConfig = await AiDevConfig.create({ isGlobal: false });
     const projectPath = process.cwd();
 
+    // Determine source to use (explicit flag or default source)
+    const sourceToUse = flags.source ?? globalConfig.getDefaultSource()?.repo;
+
+    // Show which source is being displayed (if any)
+    if (sourceToUse && !this.jsonEnabled()) {
+      this.log(`\x1b[32mShowing artifacts from source: ${sourceToUse}\x1b[0m`);
+    }
+
     // Scan local artifacts
     const localArtifacts = await LocalFileScanner.scanAll(projectPath);
     const instructions = await LocalFileScanner.scanInstructions(projectPath);
@@ -57,7 +65,7 @@ export default class List extends SfCommand<ListResult> {
     // Fetch available artifacts from sources with error tracking
     const service = new ArtifactService(globalConfig, localConfig, projectPath);
     const { artifacts: availableArtifacts, errors } = await service.listAvailableWithErrors({
-      source: flags.source,
+      source: sourceToUse,
     });
 
     // Show warnings for failed sources
@@ -67,8 +75,11 @@ export default class List extends SfCommand<ListResult> {
       }
     }
 
-    // Merge local with manifest artifacts
-    const merged = LocalFileScanner.mergeArtifacts(localArtifacts, availableArtifacts);
+    // Get installed artifacts for source enrichment
+    const installedArtifacts = localConfig.getInstalledArtifacts();
+
+    // Merge local with manifest artifacts (with source filtering)
+    const merged = LocalFileScanner.mergeArtifacts(localArtifacts, availableArtifacts, installedArtifacts, sourceToUse);
 
     // Group by type
     const groups = LocalFileScanner.groupByType(merged, instructions);

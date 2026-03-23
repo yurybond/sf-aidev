@@ -1,6 +1,6 @@
 # sf-aidev
 
-[![NPM](https://img.shields.io/npm/v/sf-aidev.svg?label=sf-aidev)](https://www.npmjs.com/package/sf-aidev) [![Downloads/week](https://img.shields.io/npm/dw/sf-aidev.svg)](https://npmjs.org/package/sf-aidev) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/salesforcecli/sf-aidev/main/LICENSE.txt)
+[![NPM](https://img.shields.io/npm/v/sf-aidev.svg?label=sf-aidev)](https://www.npmjs.com/package/sf-aidev) [![Downloads/week](https://img.shields.io/npm/dw/sf-aidev.svg)](https://npmjs.org/package/sf-aidev) [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://raw.githubusercontent.com/yurybond/sf-aidev/refs/heads/main/LICENSE)
 
 Salesforce CLI plugin that installs production-ready AI development tool configurations (skills, agents, prompts, commands) from GitHub source repositories. Auto-detects which AI tool is in use, supports multiple tools, and provides unified management commands with rich interactive experiences.
 
@@ -62,6 +62,13 @@ sf aidev add --source owner/repo
 | ---------- | ---- | ------------------------------------------------- |
 | `--source` | `-s` | Filter artifacts to a specific source repository. |
 
+**Source Filtering:**
+
+- When `--source` is **not provided**, the command automatically uses your **default source repository** (if configured)
+- When `--source` is **provided**, only artifacts from that specific source are shown (both local and remote)
+- A green message displays which source is being used: `Showing artifacts from source: owner/repo`
+- Only artifacts originally installed from the active source are displayed in the list
+
 **Note:** This command requires an interactive terminal. For non-interactive use (scripts, CI/CD), use the subcommands below.
 
 ### `sf aidev add skill|agent|prompt|command`
@@ -79,6 +86,13 @@ sf aidev add command --name review-pr
 | ---------- | ---- | ------------------------------------------------------------------------------------------- |
 | `--name`   | `-n` | Name of the artifact to install. If omitted, shows interactive selection (where supported). |
 | `--source` | `-s` | Source repository. Defaults to the configured default.                                      |
+
+**Source Filtering:**
+
+- When `--source` is **not provided**, uses your **default source repository** automatically
+- When `--source` is **provided**, only artifacts from that source are available for installation
+- In interactive mode (no `--name`), a green message shows the active source
+- If no default source is configured and `--source` is omitted, all sources are used
 
 ### `sf aidev remove`
 
@@ -129,6 +143,15 @@ sf aidev list --source owner/repo
 | ---------- | ---- | ------------------------------------------------ |
 | `--source` | `-s` | Filter available artifacts by source repository. |
 
+**Source Filtering:**
+
+- When `--source` is **not provided**, the command automatically uses your **default source repository** (if configured)
+- When `--source` is **provided**, only artifacts from that specific source are shown
+- A green message displays which source is active: `Showing artifacts from source: owner/repo`
+- Filters both **local** (installed) and **remote** (available) artifacts by source
+- Local artifacts originally installed from other sources are hidden when filtering
+- If no default source is configured and `--source` is omitted, all sources are used
+
 **Interactive Features:**
 
 - Press **Enter** to expand/collapse artifact descriptions
@@ -154,6 +177,14 @@ sf aidev list instructions
 | `list instructions` | Show local instruction files (CLAUDE.md, CURSOR.md, CODEX.md, copilot-instructions.md, \*.instructions.md) |
 
 The `agents`, `skills`, and `commands` subcommands support the `--source` flag. The `instructions` command is local-only.
+
+**Source Filtering:**
+
+- When `--source` is **not provided**, these commands automatically use your **default source repository** (if configured)
+- When `--source` is **provided**, only artifacts from that specific source are displayed
+- A green message shows the active source: `Showing artifacts from source: owner/repo`
+- Filters both local (installed) and remote (available) artifacts by source
+- The `instructions` subcommand does not support `--source` as it only scans local files
 
 **Interactive Features:**
 

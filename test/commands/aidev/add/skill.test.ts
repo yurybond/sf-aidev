@@ -49,7 +49,10 @@ describe('aidev add skill', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getDefaultSource: () => undefined,
+      getInstalledArtifacts: () => [],
+    } as unknown as AiDevConfig);
     installStub = sandbox.stub(ArtifactService.prototype, 'install');
   });
 

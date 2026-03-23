@@ -25,7 +25,10 @@ describe('aidev remove agent', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sandbox.stub(AiDevConfig, 'create').resolves({} as AiDevConfig);
+    sandbox.stub(AiDevConfig, 'create').resolves({
+      getDefaultSource: () => undefined,
+      getInstalledArtifacts: () => [],
+    } as unknown as AiDevConfig);
     isInstalledStub = sandbox.stub(ArtifactService.prototype, 'isInstalled');
     uninstallStub = sandbox.stub(ArtifactService.prototype, 'uninstall');
     confirmStub = sandbox.stub(SfCommand.prototype, 'confirm');

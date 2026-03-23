@@ -28,6 +28,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -51,6 +52,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -70,6 +72,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox
@@ -104,6 +107,7 @@ describe('aidev list commands', () => {
         { repo: 'source2/repo', isDefault: false, addedAt: '' },
       ],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -128,6 +132,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'failing/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -147,6 +152,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'failing/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -170,6 +176,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -201,6 +208,7 @@ describe('aidev list commands', () => {
       sandbox.stub(AiDevConfig, 'create').resolves({
         getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
         getInstalledArtifacts: () => [],
+        getDefaultSource: () => undefined,
         getTool: () => 'copilot',
       } as unknown as AiDevConfig);
       sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -241,6 +249,7 @@ describe('aidev list commands', () => {
       sandbox.stub(AiDevConfig, 'create').resolves({
         getSources: () => [],
         getInstalledArtifacts: () => [],
+        getDefaultSource: () => undefined,
         getTool: () => 'copilot',
       } as unknown as AiDevConfig);
       sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);
@@ -275,6 +284,7 @@ describe('aidev list commands', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [{ repo: 'test/repo', isDefault: true, addedAt: '' }],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     sandbox.stub(LocalFileScanner, 'scanCommands').resolves([]);

@@ -25,6 +25,7 @@ describe('aidev list instructions', () => {
     sandbox.stub(AiDevConfig, 'create').resolves({
       getSources: () => [],
       getInstalledArtifacts: () => [],
+      getDefaultSource: () => undefined,
       getTool: () => 'copilot',
     } as unknown as AiDevConfig);
     scanInstructionsStub = sandbox.stub(LocalFileScanner, 'scanInstructions');
