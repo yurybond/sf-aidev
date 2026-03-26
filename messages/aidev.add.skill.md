@@ -88,4 +88,4 @@ Failed to install %s skill(s):
 
 # prompt.Select
 
-Select skills to install (use Space to select, Enter to confirm):
+Select skills to install (use Space to select, + all, - invert, Enter to confirm):

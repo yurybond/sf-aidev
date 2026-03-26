@@ -88,4 +88,4 @@ Failed to install %s prompt(s):
 
 # prompt.Select
 
-Select prompts to install (use Space to select, Enter to confirm):
+Select prompts to install (use Space to select, + all, - invert, Enter to confirm):

@@ -5,9 +5,10 @@
  */
 
 import * as readline from 'node:readline';
-import { select, checkbox, confirm, Separator } from '@inquirer/prompts';
+import { select, confirm, Separator } from '@inquirer/prompts';
 import type { GroupedArtifacts, MergedArtifact } from '../services/localFileScanner.js';
 import type { ExpandableItem } from './expandableSelect.js';
+import { filterableCheckbox, type FilterableCheckboxItem } from './filterableCheckbox.js';
 
 /**
  * Square checkbox characters for consistent display.
@@ -19,7 +20,6 @@ const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
  * Keyboard help text for different prompt types.
  */
 const SELECT_HELP = '(↑↓ navigate, Enter select, Esc exit)';
-const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, Enter confirm, Esc cancel)';
 
 /**
  * Cancellable promise type returned by @inquirer/prompts.
@@ -31,6 +31,7 @@ type CancellablePromise<T> = Promise<T> & { cancel: () => void };
  *
  * @inquirer/prompts doesn't handle Escape key natively - only Ctrl+C.
  * This wrapper listens for Escape and calls the prompt's cancel() method.
+ * Note: Not used by filterableCheckbox which has native Escape handling.
  */
 async function withEscapeHandling<T>(prompt: CancellablePromise<T>): Promise<T> {
   // Set up raw mode to capture Escape key
@@ -245,8 +246,8 @@ export async function promptArtifactList(groups: GroupedArtifacts, message: stri
 }
 
 /**
- * Prompt user to select multiple artifacts via checkbox.
- * Returns empty array if user cancels (Escape/Ctrl+C).
+ * Prompt user to select multiple artifacts via checkbox with filtering.
+ * Returns empty array if user cancels (Escape).
  *
  * @param artifacts - Array of artifacts to select from.
  * @param message - Prompt message to display.
@@ -264,27 +265,17 @@ export async function promptArtifactCheckbox(
     return [];
   }
 
-  try {
-    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
-    return await withEscapeHandling(
-      checkbox<MergedArtifact>({
-        message: `${message} ${CHECKBOX_HELP}`,
-        choices,
-        pageSize: 15,
-        theme: CHECKBOX_THEME,
-      }) as CancellablePromise<MergedArtifact[]>
-    );
-  } catch (error) {
-    if (isCancelledError(error)) {
-      return [];
-    }
-    throw error;
-  }
+  return filterableCheckbox<MergedArtifact>({
+    message,
+    choices,
+    pageSize: 15,
+    theme: CHECKBOX_THEME,
+  });
 }
 
 /**
- * Prompt user to select multiple artifacts from grouped list via checkbox.
- * Returns empty array if user cancels (Escape/Ctrl+C).
+ * Prompt user to select multiple artifacts from grouped list via checkbox with filtering.
+ * Returns empty array if user cancels (Escape).
  *
  * @param groups - Grouped artifacts object.
  * @param message - Prompt message to display.
@@ -302,22 +293,23 @@ export async function promptGroupedCheckbox(
     return [];
   }
 
-  try {
-    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
-    return await withEscapeHandling(
-      checkbox<MergedArtifact>({
-        message: `${message} ${CHECKBOX_HELP}`,
-        choices,
-        pageSize: 15,
-        theme: CHECKBOX_THEME,
-      }) as CancellablePromise<MergedArtifact[]>
-    );
-  } catch (error) {
-    if (isCancelledError(error)) {
-      return [];
+  // Convert Separator to FilterableCheckboxItem format
+  const filterableChoices: Array<FilterableCheckboxItem<MergedArtifact>> = choices.map((choice) => {
+    if (choice instanceof Separator) {
+      return {
+        type: 'separator' as const,
+        separator: choice.separator,
+      };
     }
-    throw error;
-  }
+    return choice;
+  });
+
+  return filterableCheckbox<MergedArtifact>({
+    message,
+    choices: filterableChoices,
+    pageSize: 15,
+    theme: CHECKBOX_THEME,
+  });
 }
 
 /**
@@ -346,8 +338,8 @@ export async function promptConfirm(message: string, defaultValue = false): Prom
 }
 
 /**
- * Generic checkbox prompt with Escape key support.
- * Returns empty array if user cancels (Escape/Ctrl+C).
+ * Generic checkbox prompt with filtering and Escape key support.
+ * Returns empty array if user cancels (Escape).
  *
  * @param config - Checkbox configuration (message, choices, pageSize, theme).
  * @returns Array of selected values.
@@ -362,22 +354,23 @@ export async function promptCheckboxGeneric<T>(config: {
     return [];
   }
 
-  try {
-    // Cast needed because @inquirer/prompts types don't expose CancelablePromise
-    return await withEscapeHandling(
-      checkbox<T>({
-        message: config.message,
-        choices: config.choices,
-        pageSize: config.pageSize ?? 15,
-        theme: config.theme ?? CHECKBOX_THEME,
-      }) as CancellablePromise<T[]>
-    );
-  } catch (error) {
-    if (isCancelledError(error)) {
-      return [];
+  // Convert Separator to FilterableCheckboxItem format
+  const filterableChoices: Array<FilterableCheckboxItem<T>> = config.choices.map((choice) => {
+    if (choice instanceof Separator) {
+      return {
+        type: 'separator' as const,
+        separator: choice.separator,
+      };
     }
-    throw error;
-  }
+    return choice;
+  });
+
+  return filterableCheckbox<T>({
+    message: config.message,
+    choices: filterableChoices,
+    pageSize: config.pageSize ?? 15,
+    theme: config.theme ?? CHECKBOX_THEME,
+  });
 }
 
 /**
