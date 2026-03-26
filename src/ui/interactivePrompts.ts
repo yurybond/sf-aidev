@@ -19,7 +19,7 @@ const CHECKBOX_UNCHECKED = '\u2610'; // Unchecked box (empty square)
  * Keyboard help text for different prompt types.
  */
 const SELECT_HELP = '(↑↓ navigate, Enter select, Esc exit)';
-const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, Enter confirm, Esc cancel)';
+const CHECKBOX_HELP = '(↑↓ navigate, Space toggle, + all, - invert, Enter confirm, Esc cancel)';
 
 /**
  * Cancellable promise type returned by @inquirer/prompts.
@@ -272,6 +272,7 @@ export async function promptArtifactCheckbox(
         choices,
         pageSize: 15,
         theme: CHECKBOX_THEME,
+        shortcuts: { all: '+', invert: '-' },
       }) as CancellablePromise<MergedArtifact[]>
     );
   } catch (error) {
@@ -310,6 +311,7 @@ export async function promptGroupedCheckbox(
         choices,
         pageSize: 15,
         theme: CHECKBOX_THEME,
+        shortcuts: { all: '+', invert: '-' },
       }) as CancellablePromise<MergedArtifact[]>
     );
   } catch (error) {
@@ -370,6 +372,7 @@ export async function promptCheckboxGeneric<T>(config: {
         choices: config.choices,
         pageSize: config.pageSize ?? 15,
         theme: config.theme ?? CHECKBOX_THEME,
+        shortcuts: { all: '+', invert: '-' },
       }) as CancellablePromise<T[]>
     );
   } catch (error) {

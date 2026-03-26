@@ -88,4 +88,4 @@ Failed to install %s agent(s):
 
 # prompt.Select
 
-Select agents to install (use Space to select, Enter to confirm):
+Select agents to install (use Space to select, + all, - invert, Enter to confirm):
