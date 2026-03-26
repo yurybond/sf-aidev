@@ -232,7 +232,7 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     }
 
     // Capture printable character input for filtering
-    if (key.name && key.name.length === 1 && !key.ctrl && !key.meta) {
+    if (key.name && key.name.length === 1 && !key.ctrl) {
       setFilterTerm(filterTerm + key.name);
       setExpandedIndex(null); // Collapse any expanded items
     }
