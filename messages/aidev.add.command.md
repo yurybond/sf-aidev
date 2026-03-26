@@ -88,4 +88,4 @@ Failed to install %s command(s):
 
 # prompt.Select
 
-Select commands to install (use Space to select, Enter to confirm):
+Select commands to install (use Space to select, + all, - invert, Enter to confirm):

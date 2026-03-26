@@ -18,7 +18,7 @@ Disable interactive mode. This flag is not supported for the parent command; use
 
 # prompt.Select
 
-Select artifacts to remove (use Space to select, Enter to confirm, Escape to cancel):
+Select artifacts to remove (use Space to select, + all, - invert, Enter to confirm, Escape to cancel):
 
 # prompt.Confirm
 

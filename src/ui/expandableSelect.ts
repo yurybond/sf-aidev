@@ -15,6 +15,7 @@ import {
   isEnterKey,
   isUpKey,
   isDownKey,
+  isBackspaceKey,
   type KeypressEvent,
 } from '@inquirer/core';
 import type { MergedArtifact } from '../services/localFileScanner.js';
@@ -128,18 +129,60 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
   const [descriptions, setDescriptions] = useState<Map<number, string | undefined>>(new Map());
+  const [filterTerm, setFilterTerm] = useState('');
+
+  // Filter items based on search term
+  const filteredItems = useMemo(() => {
+    if (!filterTerm) {
+      return items;
+    }
+    const lowerFilter = filterTerm.toLowerCase();
+    return items.filter((item) => {
+      if (isSeparator(item)) {
+        return false; // Hide separators when filtering
+      }
+      return item.value.name.toLowerCase().includes(lowerFilter);
+    });
+  }, [items, filterTerm]);
+
+  // Determine which items array to use
+  const itemsToUse = filterTerm ? filteredItems : items;
+
+  // Reset active index to first item when filter changes
+  if (filterTerm && active >= itemsToUse.length) {
+    const first = itemsToUse.findIndex(isSelectable);
+    if (first >= 0) {
+      setActive(first);
+    }
+  }
 
   // Handle keypress events
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useKeypress((key: KeypressEvent, rl: any) => {
+    // Handle backspace for filter editing
+    if (isBackspaceKey(key)) {
+      if (filterTerm.length > 0) {
+        setFilterTerm(filterTerm.slice(0, -1));
+        setExpandedIndex(null); // Collapse any expanded items
+      }
+      return;
+    }
+
+    // Handle escape - clear filter first, then exit
     if (key.name === 'escape') {
-      // Exit the prompt
-      done();
+      if (filterTerm) {
+        // Clear filter if active
+        setFilterTerm('');
+        setExpandedIndex(null);
+      } else {
+        // Exit the prompt
+        done();
+      }
       return;
     }
 
     if (isEnterKey(key)) {
-      const currentItem = items[active];
+      const currentItem = itemsToUse[active];
       if (isSelectable(currentItem)) {
         if (expandedIndex === active) {
           // Toggle off - hide description
@@ -178,24 +221,33 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
       const offset = isUpKey(key) ? -1 : 1;
       let next = active;
       do {
-        next = (next + offset + items.length) % items.length;
-      } while (!isSelectable(items[next]) && next !== active);
+        next = (next + offset + itemsToUse.length) % itemsToUse.length;
+      } while (!isSelectable(itemsToUse[next]) && next !== active);
 
       // Only update if we found a valid selectable item AND it's different
-      if (isSelectable(items[next]) && next !== active) {
+      if (isSelectable(itemsToUse[next]) && next !== active) {
         setActive(next);
       }
+      return;
+    }
+
+    // Capture printable character input for filtering
+    if (key.name && key.name.length === 1 && !key.ctrl) {
+      setFilterTerm(filterTerm + key.name);
+      setExpandedIndex(null); // Collapse any expanded items
     }
   });
 
   firstRender.current = false;
 
   // Build the rendered output with keys in white and text in grey
-  const helpTip = `(${RESET}↑↓${GREY} navigate • ${RESET}⏎${GREY} toggle • ${RESET}Esc${GREY} exit${RESET})`;
+  const helpTip = filterTerm
+    ? `(${RESET}↑↓${GREY} navigate • ${RESET}⏎${GREY} toggle • ${RESET}Esc${GREY} clear filter${RESET})`
+    : `(${RESET}↑↓${GREY} navigate • ${RESET}⏎${GREY} toggle • ${RESET}Esc${GREY} exit${RESET})`;
 
   // Render items with pagination
   const page = usePagination({
-    items,
+    items: itemsToUse,
     active,
     renderItem({ item, index, isActive }) {
       if (isSeparator(item)) {
@@ -229,5 +281,22 @@ export const expandableSelect = createPrompt<void, ExpandableSelectConfig>((conf
     loop: true,
   });
 
-  return `${config.message}\n${page}\n${helpTip}`;
+  // Build output with filter display
+  let output = config.message;
+
+  // Show filter term if active
+  if (filterTerm) {
+    output += `\n${GREY}Filter: ${RESET}${filterTerm}`;
+  }
+
+  // Show message if no items match
+  if (filterTerm && itemsToUse.length === 0) {
+    output += `\n${GREY}No items match your filter${RESET}`;
+  } else {
+    output += `\n${page}`;
+  }
+
+  output += `\n${helpTip}`;
+
+  return output;
 });
